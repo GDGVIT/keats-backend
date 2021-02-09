@@ -45,9 +45,9 @@ func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 }
 
 // Parse parses UUID to user and returns the user or returns an error
-func Parse(userId string) (*models.User, error) {
+func Parse(userID string) (*models.User, error) {
 	// convert string in body to UUID
-	id, err := uuid.Parse(userId)
+	id, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
 	}
