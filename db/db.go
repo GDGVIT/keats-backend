@@ -4,10 +4,11 @@ import (
 	"context"
 	"log"
 
-	"github.com/Krishap-s/keats-backend/models"
 	"github.com/go-pg/pg/v10"
 	"github.com/go-pg/pg/v10/orm"
 	"github.com/spf13/viper"
+
+	"github.com/Krishap-s/keats-backend/models"
 )
 
 var db *pg.DB = nil
@@ -47,7 +48,7 @@ func Migrate() error {
 
 	for _, model := range models {
 		err := GetDB().Model(model).CreateTable(&orm.CreateTableOptions{
-			Temp: false,
+			Temp:        false,
 			IfNotExists: true,
 		})
 		if err != nil {

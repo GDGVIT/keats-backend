@@ -1,10 +1,11 @@
 package crud
 
 import (
+	"github.com/google/uuid"
+
 	"github.com/Krishap-s/keats-backend/db"
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/schemas"
-	"github.com/google/uuid"
 )
 
 // CreateUser creates a user in the database or returns an error

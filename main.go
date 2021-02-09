@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Krishap-s/keats-backend/api/endpoints"
-	"github.com/Krishap-s/keats-backend/db"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/viper"
+
+	"github.com/Krishap-s/keats-backend/api/endpoints"
+	"github.com/Krishap-s/keats-backend/db"
 )
 
 func healthCheck(c *fiber.Ctx) error {
@@ -34,5 +35,7 @@ func main() {
 
 	endpoints.MountRoutes(app)
 
-	app.Listen(":3000")
+	if err := app.Listen(":3000"); err != nil {
+		log.Panic(err)
+	}
 }
