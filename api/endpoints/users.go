@@ -10,7 +10,7 @@ import (
 	"github.com/Krishap-s/keats-backend/schemas"
 )
 
-func userErrHandler(c *fiber.Ctx,err error) error {
+func userErrHandler(c *fiber.Ctx, err error) error {
 	if err == pg.ErrNoRows {
 		return c.Status(http.StatusConflict).JSON(fiber.Map{
 			"msg": "user with this username already exists",
@@ -36,7 +36,7 @@ func createUser(c *fiber.Ctx) error {
 
 	created, err := crud.CreateUser(u)
 	if err != nil {
-		err := userErrHandler(c,err)
+		err := userErrHandler(c, err)
 		return err
 	}
 
@@ -58,7 +58,7 @@ func updateUser(c *fiber.Ctx) error {
 
 	updated, err := crud.UpdateUser(u)
 	if err != nil {
-		err := userErrHandler(c,err)
+		err := userErrHandler(c, err)
 		return err
 	}
 
@@ -72,7 +72,7 @@ func getUser(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	user, err := crud.GetUser(userID)
 	if err != nil {
-		err := userErrHandler(c,err)
+		err := userErrHandler(c, err)
 		return err
 	}
 
@@ -83,7 +83,7 @@ func deleteUser(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	deleted, err := crud.DeleteUser(userID)
 	if err != nil {
-		err := userErrHandler(c,err)
+		err := userErrHandler(c, err)
 		return err
 	}
 

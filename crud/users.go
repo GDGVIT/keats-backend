@@ -44,17 +44,28 @@ func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 	return user, err
 }
 
-// GetUser fetches an existing user or returns an error
-func GetUser(userID string) (*models.User, error) {
-	db := db.GetDB()
-
+// Parse parses UUID to user and returns the user or returns an error
+func Parse(userId string) (*models.User, error) {
 	// convert string in body to UUID
-	id, err := uuid.Parse(userID)
+	id, err := uuid.Parse(userId)
 	if err != nil {
 		return nil, err
 	}
 
 	user := &models.User{ID: id}
+	return user, nil
+
+}
+
+// GetUser fetches an existing user or returns an error
+func GetUser(userID string) (*models.User, error) {
+	db := db.GetDB()
+
+	user, err := Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	err = db.Model(user).WherePK().Select()
 	if err != nil {
 		return nil, err
@@ -67,13 +78,11 @@ func GetUser(userID string) (*models.User, error) {
 func DeleteUser(userID string) (*models.User, error) {
 	db := db.GetDB()
 
-	// convert string in body to UUID
-	id, err := uuid.Parse(userID)
+	user, err := Parse(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	user := &models.User{ID: id}
 	_, err = db.Model(user).WherePK().Delete()
 	if err != nil {
 		return nil, err
