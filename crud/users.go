@@ -13,7 +13,6 @@ func CreateUser(objIn *schemas.UserCreate) (*models.User, error) {
 	db := db.GetDB()
 	user := &models.User{
 		Username: objIn.Username,
-		IsActive: objIn.IsActive,
 	}
 
 	_, err := db.Model(user).
@@ -36,7 +35,6 @@ func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 	user := &models.User{
 		ID:       id,
 		Username: objIn.Username,
-		IsActive: objIn.IsActive,
 	}
 
 	_, err = db.Model(user).Returning("*").WherePK().UpdateNotZero()
