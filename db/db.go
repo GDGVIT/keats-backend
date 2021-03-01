@@ -37,7 +37,7 @@ func Migrate() error {
 		(*models.Club)(nil),
 		(*models.Comment)(nil),
 		(*models.ChatMessage)(nil),
-		(*models.RoomUser)(nil),
+		(*models.ClubUser)(nil),
 	}
 
 	ctx := context.Background()
