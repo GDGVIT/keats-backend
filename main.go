@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	jwtware "github.com/gofiber/jwt/v2"
 	"github.com/spf13/viper"
 
 	"github.com/Krishap-s/keats-backend/configs"
@@ -34,6 +35,11 @@ func main() {
 	app.Use(limiter.New(configs.LimiterConfig))
 	app.Use(logger.New(configs.LoggerConfig))
 	app.Use(recover.New(configs.RecoverConfig))
+
+	// Set Up JWT middleware
+	jwtconf := configs.JWTConfig
+	jwtconf.SigningKey = configs.GetKey().Public()
+	app.Use(jwtware.New(jwtconf))
 
 
 	app.Get("/", healthCheck)
