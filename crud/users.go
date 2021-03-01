@@ -1,7 +1,7 @@
 package crud
 
 import (
-	"github.com/google/uuid"
+//	"github.com/google/uuid"
 
 	"github.com/Krishap-s/keats-backend/db"
 	"github.com/Krishap-s/keats-backend/models"
@@ -12,11 +12,12 @@ import (
 func CreateUser(objIn *schemas.UserCreate) (*models.User, error) {
 	db := db.GetDB()
 	user := &models.User{
-		Username: objIn.Username,
+		PhoneNo: objIn.PhoneNo,
 	}
 
 	_, err := db.Model(user).
-		OnConflict("DO NOTHING").
+		OnConflict("(phone_no)DO UPDATE").
+		Set("phone_no = EXCLUDED.phone_no").
 		Returning("*").
 		Insert()
 	return user, err
@@ -26,45 +27,24 @@ func CreateUser(objIn *schemas.UserCreate) (*models.User, error) {
 func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 	db := db.GetDB()
 
-	// convert string in json body to UUID
-	id, err := uuid.Parse(objIn.ID)
-	if err != nil {
-		return nil, err
-	}
-
 	user := &models.User{
-		ID:       id,
-		Username: objIn.Username,
+		PhoneNo: objIn.PhoneNo,
 	}
 
-	_, err = db.Model(user).Returning("*").WherePK().UpdateNotZero()
+	_, err := db.Model(user).Returning("*").Where("phone_no = ?phone_no").UpdateNotZero()
 
 	return user, err
 }
 
-// Parse parses UUID to user and returns the user or returns an error
-func Parse(userID string) (*models.User, error) {
-	// convert string in body to UUID
-	id, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	user := &models.User{ID: id}
-	return user, nil
-
-}
-
 // GetUser fetches an existing user or returns an error
-func GetUser(userID string) (*models.User, error) {
+func GetUser(phone_no string) (*models.User, error) {
 	db := db.GetDB()
 
-	user, err := Parse(userID)
-	if err != nil {
-		return nil, err
+	user := &models.User{
+		PhoneNo: phone_no,
 	}
 
-	err = db.Model(user).WherePK().Select()
+	err := db.Model(user).Where("phone_no = ?phone_no").Select()
 	if err != nil {
 		return nil, err
 	}
@@ -73,15 +53,14 @@ func GetUser(userID string) (*models.User, error) {
 }
 
 // DeleteUser deletes an existing user or returns an error
-func DeleteUser(userID string) (*models.User, error) {
+func DeleteUser(phone_no string) (*models.User, error) {
 	db := db.GetDB()
 
-	user, err := Parse(userID)
-	if err != nil {
-		return nil, err
+	user := &models.User{
+		PhoneNo: phone_no,
 	}
 
-	_, err = db.Model(user).WherePK().Delete()
+	_, err := db.Model(user).Where("phone_no = ?phone_no").Delete()
 	if err != nil {
 		return nil, err
 	}
