@@ -32,6 +32,10 @@ func GetDB() *pg.DB {
 func Migrate() error {
 	models := []interface{}{
 		(*models.User)(nil),
+		(*models.Club)(nil),
+		(*models.Comment)(nil),
+		(*models.ChatMessage)(nil),
+		(*models.RoomUser)(nil),
 	}
 
 	ctx := context.Background()
