@@ -5,8 +5,12 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/spf13/viper"
 
+	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/api/endpoints"
 	"github.com/Krishap-s/keats-backend/db"
 )
@@ -25,6 +29,13 @@ func main() {
 	}
 
 	app := fiber.New()
+
+	// Use Middleware
+	app.Use(limiter.New(configs.LimiterConfig))
+	app.Use(logger.New(configs.LoggerConfig))
+	app.Use(recover.New(configs.RecoverConfig))
+
+
 	app.Get("/", healthCheck)
 
 	// Run db migrations

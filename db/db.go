@@ -20,6 +20,8 @@ func GetDB() *pg.DB {
 	}
 
 	opt, err := pg.ParseURL(viper.GetString("DATABASE_URL"))
+	opt.User = viper.GetString("POSTGRES_USER")
+	opt.Password = viper.GetString("POSTGRES_PASSWORD")
 	if err != nil {
 		panic(err)
 	}
