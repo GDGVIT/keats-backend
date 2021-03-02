@@ -8,6 +8,7 @@ import(
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v2"
 	jwt "github.com/form3tech-oss/jwt-go"
+	"github.com/go-pg/pg/v10"
 	"github.com/spf13/viper"
 
 	"github.com/Krishap-s/keats-backend/crud"
@@ -54,7 +55,11 @@ var JWTConfig= jwtware.Config{
 				phone_no := claims["phone_number"].(string)
 				user ,err:= crud.GetUser(phone_no)
 				if err != nil {
-					errors.InternalServerError(c,"")
+					if err == pg.ErrNoRows{
+						return errors.UnauthorizedError(c,"Invalid JWT")
+					} else {
+					return errors.InternalServerError(c,"")
+				}
 				}
 				c.Locals("user",user)
 				return c.Next()
