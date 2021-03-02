@@ -2,7 +2,11 @@ package schemas
 
 // UserCreate represents a user to be created
 type UserCreate struct {
+	Username string `json:"username"`
 	PhoneNo string `json:"phone_number"`
+	ProfilePic string `json:"profile_pic"`
+	Email string `json:"email"`
+	Bio string `json:"bio"`
 }
 
 // UserUpdate represents a user to be updated

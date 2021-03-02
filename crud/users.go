@@ -8,18 +8,22 @@ import (
 	"github.com/Krishap-s/keats-backend/schemas"
 )
 
+
 // CreateUser creates a user in the database or returns an error
 func CreateUser(objIn *schemas.UserCreate) (*models.User, error) {
 	db := db.GetDB()
+	if objIn.Username == "" {
+		objIn.Username = "Blake"
+	}
 	user := &models.User{
+		Username: objIn.Username,
 		PhoneNo: objIn.PhoneNo,
 	}
 
 	_, err := db.Model(user).
-		OnConflict("(phone_no)DO UPDATE").
-		Set("phone_no = EXCLUDED.phone_no").
+		OnConflict("(phone_no) DO NOTHING").
 		Returning("*").
-		Insert()
+		SelectOrInsert()
 	return user, err
 }
 
