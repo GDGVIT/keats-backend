@@ -11,6 +11,7 @@ import (
 	"github.com/Krishap-s/keats-backend/firebaseclient"
 	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/schemas"
+	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/errors"
 )
@@ -33,6 +34,20 @@ type createUserRequest struct {
 	IDToken string `json:"id_token"`
 }
 
+func createJWT(user *models.User) (string,error) {
+	token := jwt.New(jwt.SigningMethodRS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["username"] = user.Username
+	claims["phone_number"] = user.PhoneNo
+	claims["bio"] = user.Bio
+	claims["profile_pic"] = user.ProfilePic
+	signedtoken,err := token.SignedString(configs.GetKey())
+	if err != nil {
+		return "",err
+	}
+	return signedtoken,nil
+}
+
 func createUser(c *fiber.Ctx) error {
 	req := new(createUserRequest)
 	client ,err := firebaseclient.GetClient()
@@ -50,28 +65,18 @@ func createUser(c *fiber.Ctx) error {
 	if !ok {
 		return errors.BadRequestError(c,"IDToken missing phone_number")
 	}
-	user := &schemas.UserCreate{
+	u := &schemas.UserCreate{
 		PhoneNo: phone_number,
 	}
 
-	created, err := crud.CreateUser(user)
+	created, err := crud.CreateUser(u)
 	if err != nil{
 		return errors.InternalServerError(c,"")
 	}
 
-	token := jwt.New(jwt.SigningMethodRS256)
-
-	claims := token.Claims.(jwt.MapClaims)
-	claims["username"] = created.Username
-	claims["phone_number"] = created.PhoneNo
-	claims["email"] = created.Email
-	claims["bio"] = created.Bio
-	claims["profile_pic"] = created.ProfilePic
-
-	signedtoken,err := token.SignedString(configs.GetKey())
-
-	if err != nil {
-		return errors.InternalServerError(c, "")
+	signedtoken ,err := createJWT(created)
+	if err != nil{
+		return errors.InternalServerError(c,"")
 	}
 
 	return c.JSON(fiber.Map{
@@ -90,27 +95,31 @@ func updateUser(c *fiber.Ctx) error {
 		})
 	}
 
+	user := c.Locals("user").(*models.User)
+	u.PhoneNo = user.PhoneNo
+
 	updated, err := crud.UpdateUser(u)
+
 	if err != nil {
-		err = userErrHandler(c, err)
-		return err
+		return errors.InternalServerError(c,"")
+	}
+
+	signedtoken ,err := createJWT(updated)
+	if err != nil{
+		return errors.InternalServerError(c,"")
 	}
 
 	return c.JSON(fiber.Map{
-		"msg":  "user updated successfully",
-		"user": updated,
+		"status":  "success",
+		"data": fiber.Map{"user":updated,"jwt_token":signedtoken},
 	})
 }
 
 func getUser(c *fiber.Ctx) error {
-	userID := c.Params("id")
-	user, err := crud.GetUser(userID)
-	if err != nil {
-		err = userErrHandler(c, err)
-		return err
-	}
-
-	return c.JSON(user)
+	return c.JSON(fiber.Map{
+		"status":"success",
+		"data":c.Locals("user"),
+	})
 }
 
 func deleteUser(c *fiber.Ctx) error {
@@ -132,5 +141,5 @@ func MountRoutes(app *fiber.App) {
 	app.Post("/api/user", createUser)
 	app.Patch("/api/user", updateUser)
 	app.Delete("/api/user", deleteUser)
-	app.Get("/api/user/:id", getUser)
+	app.Get("/api/user", getUser)
 }

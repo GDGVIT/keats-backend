@@ -33,6 +33,9 @@ func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 
 	user := &models.User{
 		PhoneNo: objIn.PhoneNo,
+		Username: objIn.Username,
+		Email: objIn.Email,
+		Bio: objIn.Bio,
 	}
 
 	_, err := db.Model(user).Returning("*").Where("phone_no = ?phone_no").UpdateNotZero()
