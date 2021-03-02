@@ -1,6 +1,6 @@
 package configs
 
-import(
+import (
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -10,8 +10,7 @@ import(
 )
 
 var LimiterConfig = limiter.Config{
-	Max: viper.GetInt("MAX_REQUESTS"),
-	Duration: time.Duration(viper.GetInt("TIME_PERIOD_IN_MINUTES")) * time.Minute,
-	LimitReached:errors.TooManyRequestsError,
+	Max:          viper.GetInt("MAX_REQUESTS"),
+	Duration:     time.Duration(viper.GetInt("TIME_PERIOD_IN_MINUTES")) * time.Minute,
+	LimitReached: errors.TooManyRequestsError,
 }
-

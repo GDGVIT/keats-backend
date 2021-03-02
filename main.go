@@ -1,5 +1,6 @@
 package main
 
+//goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
 	"log"
@@ -11,9 +12,9 @@ import (
 	jwtware "github.com/gofiber/jwt/v2"
 	"github.com/spf13/viper"
 
-	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/api/endpoints"
-	"github.com/Krishap-s/keats-backend/db"
+	"github.com/Krishap-s/keats-backend/configs"
+	"github.com/Krishap-s/keats-backend/pgdb"
 )
 
 func healthCheck(c *fiber.Ctx) error {
@@ -38,15 +39,14 @@ func main() {
 
 	// Set Up JWT middleware
 	jwtconf := configs.JWTConfig
-	jwtconf.SigningKey = configs.GetKey().Public()
+	jwtconf.SigningKey = []byte(configs.GetSecret())
 	app.Use(jwtware.New(jwtconf))
-
 
 	app.Get("/", healthCheck)
 
-	// Run db migrations
+	// Run pgdb migrations
 	log.Println("Running database migrations")
-	if err := db.Migrate(); err != nil {
+	if err := pgdb.Migrate(); err != nil {
 		log.Panic(err)
 	}
 

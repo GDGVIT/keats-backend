@@ -1,19 +1,19 @@
 package endpoints
 
 import (
-	"net/http"
 	"context"
+	"net/http"
 
+	jwt "github.com/form3tech-oss/jwt-go"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
-	jwt "github.com/form3tech-oss/jwt-go"
 
-	"github.com/Krishap-s/keats-backend/firebaseclient"
-	"github.com/Krishap-s/keats-backend/crud"
-	"github.com/Krishap-s/keats-backend/schemas"
-	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/configs"
+	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/errors"
+	"github.com/Krishap-s/keats-backend/firebaseclient"
+	"github.com/Krishap-s/keats-backend/models"
+	"github.com/Krishap-s/keats-backend/schemas"
 )
 
 func userErrHandler(c *fiber.Ctx, err error) error {
@@ -34,54 +34,52 @@ type createUserRequest struct {
 	IDToken string `json:"id_token"`
 }
 
-func createJWT(user *models.User) (string,error) {
-	token := jwt.New(jwt.SigningMethodRS256)
+func createJWT(user *models.User) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["username"] = user.Username
-	claims["phone_number"] = user.PhoneNo
-	claims["bio"] = user.Bio
-	claims["profile_pic"] = user.ProfilePic
-	signedtoken,err := token.SignedString(configs.GetKey())
+	claims["id"] = user.ID
+	signedtoken, err := token.SignedString([]byte(configs.GetSecret()))
 	if err != nil {
-		return "",err
+		return "", err
 	}
-	return signedtoken,nil
+	return signedtoken, nil
 }
 
 func createUser(c *fiber.Ctx) error {
 	req := new(createUserRequest)
-	client ,err := firebaseclient.GetClient()
+	client, err := firebaseclient.GetClient()
 	if err != nil {
 		return errors.InternalServerError(c, "")
 	}
-	err = c.BodyParser(req);if err != nil {
+	err = c.BodyParser(req)
+	if err != nil {
 		return errors.BadRequestError(c, "Missing or Malformed IDToken")
 	}
-	firetoken, err := client.VerifyIDToken(context.Background(),req.IDToken)
+	firetoken, err := client.VerifyIDToken(context.Background(), req.IDToken)
 	if err != nil {
 		return errors.UnauthorizedError(c, "IDToken Verification failed or IDToken expired")
 	}
 	phone_number, ok := firetoken.Claims["phone_number"].(string)
 	if !ok {
-		return errors.BadRequestError(c,"IDToken missing phone_number")
+		return errors.BadRequestError(c, "IDToken missing phone_number")
 	}
 	u := &schemas.UserCreate{
 		PhoneNo: phone_number,
 	}
 
 	created, err := crud.CreateUser(u)
-	if err != nil{
-		return errors.InternalServerError(c,"")
+	if err != nil {
+		return errors.InternalServerError(c, "")
 	}
 
-	signedtoken ,err := createJWT(created)
-	if err != nil{
-		return errors.InternalServerError(c,"")
+	signedtoken, err := createJWT(created)
+	if err != nil {
+		return errors.InternalServerError(c, "")
 	}
 
 	return c.JSON(fiber.Map{
-		"status":  "success",
-		"data": fiber.Map{"user":created,"jwt_token":signedtoken},
+		"status": "success",
+		"data":   signedtoken,
 	})
 }
 
@@ -99,26 +97,20 @@ func updateUser(c *fiber.Ctx) error {
 	u.PhoneNo = user.PhoneNo
 
 	updated, err := crud.UpdateUser(u)
-
 	if err != nil {
-		return errors.InternalServerError(c,"")
-	}
-
-	signedtoken ,err := createJWT(updated)
-	if err != nil{
-		return errors.InternalServerError(c,"")
+		return errors.InternalServerError(c, "")
 	}
 
 	return c.JSON(fiber.Map{
-		"status":  "success",
-		"data": fiber.Map{"user":updated,"jwt_token":signedtoken},
+		"status": "success",
+		"data":   updated,
 	})
 }
 
 func getUser(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
-		"status":"success",
-		"data":c.Locals("user"),
+		"status": "success",
+		"data":   c.Locals("user"),
 	})
 }
 
