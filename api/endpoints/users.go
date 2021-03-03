@@ -87,18 +87,19 @@ func updateUser(c *fiber.Ctx) error {
 	u := new(schemas.UserUpdate)
 
 	if err := c.BodyParser(u); err != nil {
-		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{
-			"msg": "invalid json",
-			"err": err.Error(),
-		})
+		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
 
 	user := c.Locals("user").(*models.User)
-	u.PhoneNo = user.PhoneNo
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	u.ID = string(uidBytes)
 
 	updated, err := crud.UpdateUser(u)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return errors.InternalServerError(c, err.Error())
 	}
 
 	return c.JSON(fiber.Map{

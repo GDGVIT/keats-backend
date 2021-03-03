@@ -34,3 +34,9 @@ func InternalServerError(c *fiber.Ctx, err string) error {
 		"error":  err,
 	})
 }
+func UnprocessableEntityError(c *fiber.Ctx, err string) error {
+	return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+		"status": "error",
+		"error":  err,
+	})
+}
