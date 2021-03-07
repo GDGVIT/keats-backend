@@ -24,12 +24,6 @@ func GetSecret() string {
 }
 
 var JWTConfig = jwtware.Config{
-	Filter: func(c *fiber.Ctx) bool {
-		if c.Method() == "POST" && c.Path() == "/api/user" {
-			return true
-		}
-		return false
-	},
 	ErrorHandler: func(c *fiber.Ctx, err error) error {
 		if err.Error() == "Missing or malformed JWT" {
 			return errors.BadRequestError(c, "Missing or malformed JWT")

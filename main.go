@@ -40,7 +40,6 @@ func main() {
 	// Set Up JWT middleware
 	jwtconf := configs.JWTConfig
 	jwtconf.SigningKey = []byte(configs.GetSecret())
-	app.Use(jwtware.New(jwtconf))
 
 	app.Get("/", healthCheck)
 
@@ -50,7 +49,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	endpoints.MountRoutes(app)
+	endpoints.MountUserRoutes(app, jwtware.New(jwtconf))
 
 	if err := app.Listen(":3000"); err != nil {
 		log.Panic(err)

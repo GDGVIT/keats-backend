@@ -173,11 +173,12 @@ func deleteUser(c *fiber.Ctx) error {
 	})
 }
 
-// MountRoutes mounts all routes declared here
-func MountRoutes(app *fiber.App) {
+// MountUserRoutes mounts all routes declared here
+func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	app.Post("/api/user", createUser)
-	app.Patch("/api/user", updateUser)
-	app.Delete("/api/user", deleteUser)
-	app.Post("/api/user/updatephone", updateUserPhoneNo)
-	app.Get("/api/user", getUser)
+	authGroup := app.Group("/api/", middleware)
+	authGroup.Patch("user", updateUser)
+	authGroup.Delete("user", deleteUser)
+	authGroup.Post("user/updatephone", updateUserPhoneNo)
+	authGroup.Get("user", getUser)
 }
