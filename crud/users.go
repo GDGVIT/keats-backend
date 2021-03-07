@@ -21,6 +21,7 @@ func CreateUser(objIn *schemas.UserCreate) (*models.User, error) {
 	}
 
 	_, err := db.Model(user).
+		Where("phone_no = ?phone_no").
 		OnConflict("(phone_no) DO NOTHING").
 		Returning("*").
 		SelectOrInsert()
