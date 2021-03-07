@@ -42,3 +42,10 @@ func UnprocessableEntityError(c *fiber.Ctx, err string) error {
 		"message": err,
 	})
 }
+
+func ConflictError(c *fiber.Ctx, err string) error {
+	return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+		"status":  "error",
+		"message": err,
+	})
+}

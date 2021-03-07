@@ -30,7 +30,7 @@ func userErrHandler(c *fiber.Ctx, err error) error {
 
 }
 
-type createUserRequest struct {
+type IDTokenRequest struct {
 	IDToken string `json:"id_token"`
 }
 
@@ -46,7 +46,7 @@ func createJWT(user *models.User) (string, error) {
 }
 
 func createUser(c *fiber.Ctx) error {
-	req := new(createUserRequest)
+	req := new(IDTokenRequest)
 	client, err := firebaseclient.GetClient()
 	if err != nil {
 		return errors.InternalServerError(c, "")
@@ -96,6 +96,8 @@ func updateUser(c *fiber.Ctx) error {
 		return errors.InternalServerError(c, "")
 	}
 	u.ID = string(uidBytes)
+	u.ProfilePic = user.ProfilePic
+	u.PhoneNo = user.PhoneNo
 
 	updated, err := crud.UpdateUser(u)
 	if err != nil {
@@ -106,6 +108,48 @@ func updateUser(c *fiber.Ctx) error {
 		"status": "success",
 		"data":   updated,
 	})
+}
+
+func updateUserPhoneNo(c *fiber.Ctx) error {
+	req := new(IDTokenRequest)
+	client, err := firebaseclient.GetClient()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	err = c.BodyParser(req)
+	if err != nil {
+		return errors.BadRequestError(c, "Missing or Malformed IDToken")
+	}
+	firetoken, err := client.VerifyIDToken(context.Background(), req.IDToken)
+	if err != nil {
+		return errors.UnauthorizedError(c, "IDToken Verification failed or IDToken expired")
+	}
+	phone_number, ok := firetoken.Claims["phone_number"].(string)
+	if !ok {
+		return errors.BadRequestError(c, "IDToken missing phone_number")
+	}
+	user := c.Locals("user").(*models.User)
+	u := &schemas.UserUpdate{
+		PhoneNo: phone_number,
+	}
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	u.ID = string(uidBytes)
+	_, err = crud.UpdateUser(u)
+	if err != nil {
+		pgerr := err.(pg.Error)
+		if pgerr.IntegrityViolation() {
+			return errors.ConflictError(c, "phone number already exists")
+		}
+		return errors.InternalServerError(c, "")
+	}
+	return c.JSON(fiber.Map{
+		"status":  "success",
+		"message": "Phone number updated",
+	})
+
 }
 
 func getUser(c *fiber.Ctx) error {
@@ -134,5 +178,6 @@ func MountRoutes(app *fiber.App) {
 	app.Post("/api/user", createUser)
 	app.Patch("/api/user", updateUser)
 	app.Delete("/api/user", deleteUser)
+	app.Post("/api/user/updatephone", updateUserPhoneNo)
 	app.Get("/api/user", getUser)
 }
