@@ -143,6 +143,27 @@ func getUser(c *fiber.Ctx) error {
 	})
 }
 
+func getUserClubs(c *fiber.Ctx) error {
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	uid := string(uidBytes)
+	clubs, err := crud.GetUserClub(uid)
+	if err != nil {
+		if err == pg.ErrNoRows {
+			return errors.NotFoundError(c, "No clubs found")
+		}
+		return errors.InternalServerError(c, err.Error())
+	}
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data":   clubs,
+	})
+
+}
+
 // MountUserRoutes mounts all routes declared here
 func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	app.Post("/api/user", createUser)
@@ -150,4 +171,5 @@ func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup.Patch("user", updateUser)
 	authGroup.Post("user/updatephone", updateUserPhoneNo)
 	authGroup.Get("user", getUser)
+	authGroup.Get("user/clubs", getUserClubs)
 }

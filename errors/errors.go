@@ -49,3 +49,10 @@ func ConflictError(c *fiber.Ctx, err string) error {
 		"message": err,
 	})
 }
+
+func NotFoundError(c *fiber.Ctx, err string) error {
+	return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+		"status":  "error",
+		"message": err,
+	})
+}

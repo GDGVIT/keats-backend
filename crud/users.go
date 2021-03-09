@@ -87,3 +87,23 @@ func DeleteUser(id string) (*models.User, error) {
 
 	return user, nil
 }
+
+// GetUserClub gets clubuser records from the database
+func GetUserClub(id string) ([]*models.Club, error) {
+	db := pgdb.GetDB()
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+
+	var clubs []*models.Club
+	err = db.Model(&clubs).
+		Join("INNER JOIN club_users as cu").
+		JoinOn("cu.club_id = club.id").
+		Where("cu.user_id = ?", uid).
+		Select()
+	if err != nil {
+		return nil, err
+	}
+	return clubs, nil
+}
