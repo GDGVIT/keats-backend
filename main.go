@@ -50,6 +50,7 @@ func main() {
 	}
 
 	endpoints.MountUserRoutes(app, jwtware.New(jwtconf))
+	endpoints.MountClubRoutes(app, jwtware.New(jwtconf))
 
 	if err := app.Listen(":3000"); err != nil {
 		log.Panic(err)

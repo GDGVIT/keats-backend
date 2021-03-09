@@ -1,28 +1,34 @@
 package schemas
 
-// RoomCreate represents a room to be created
-type RoomCreate struct {
+// ClubCreate represents a room to be created
+type ClubCreate struct {
 	ID       string `json:"id"`
+	ClubName string `json:"clubname"`
 	FileURL  string `json:"file_url"`
 	PageNo   int    `json:"page_no"`
 	Private  bool   `json:"private"`
 	PageSync bool   `json:"page_sync"`
+	HostID   string `json:"host_id"`
 }
 
-// RoomUpdate represents a room to be updated
-type RoomUpdate struct {
+// ClubUpdate represents a room to be updated
+type ClubUpdate struct {
 	ID       string `json:"id"`
+	ClubName string `json:"clubname"`
 	FileURL  string `json:"file_url"`
 	PageNo   int    `json:"page_no"`
 	Private  bool   `json:"private"`
 	PageSync bool   `json:"page_sync"`
+	HostID   string `json:"host_id"`
 }
 
-// Room represents a room to be returned as a response
-type Room struct {
+// Club represents a room to be returned as a response
+type Club struct {
 	ID       string `json:"id"`
+	ClubName string `json:"clubname"`
 	FileURL  string `json:"file_url"`
 	PageNo   int    `json:"page_no"`
 	Private  bool   `json:"private"`
 	PageSync bool   `json:"page_sync"`
+	HostID   string `json:"host_id"`
 }
