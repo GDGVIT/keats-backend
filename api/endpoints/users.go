@@ -2,8 +2,6 @@ package endpoints
 
 import (
 	"context"
-	"net/http"
-
 	jwt "github.com/form3tech-oss/jwt-go"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
@@ -15,20 +13,6 @@ import (
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/schemas"
 )
-
-func userErrHandler(c *fiber.Ctx, err error) error {
-	if err == pg.ErrNoRows {
-		return c.Status(http.StatusConflict).JSON(fiber.Map{
-			"msg": "user with this username already exists",
-		})
-	}
-
-	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-		"msg": "something went wrong",
-		"err": err.Error(),
-	})
-
-}
 
 type IDTokenRequest struct {
 	IDToken string `json:"id_token"`
@@ -159,26 +143,11 @@ func getUser(c *fiber.Ctx) error {
 	})
 }
 
-func deleteUser(c *fiber.Ctx) error {
-	userID := c.Params("id")
-	deleted, err := crud.DeleteUser(userID)
-	if err != nil {
-		err = userErrHandler(c, err)
-		return err
-	}
-
-	return c.JSON(fiber.Map{
-		"msg":  "successfully deleted user",
-		"user": deleted,
-	})
-}
-
 // MountUserRoutes mounts all routes declared here
 func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	app.Post("/api/user", createUser)
 	authGroup := app.Group("/api/", middleware)
 	authGroup.Patch("user", updateUser)
-	authGroup.Delete("user", deleteUser)
 	authGroup.Post("user/updatephone", updateUserPhoneNo)
 	authGroup.Get("user", getUser)
 }
