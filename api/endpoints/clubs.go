@@ -55,10 +55,64 @@ func joinClub(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
-			"club":  club,
-			"users": users,
+			"club":     club,
+			"users":    users,
+			"comments": "{}",
+			"chat":     "{}",
 		},
 		"message": "Club joined successfully",
+	})
+}
+
+func getClub(c *fiber.Ctx) error {
+	clubId := c.Params("club_id")
+	users, err := crud.GetClubUser(clubId)
+	user := c.Locals("user").(*models.User)
+	var is_member bool = false
+	for _, clubUser := range users {
+		if clubUser.ID == user.ID {
+			is_member = true
+			break
+		}
+	}
+	if !is_member {
+		return errors.UnauthorizedError(c, "You are not a member of this club")
+	}
+	if err != nil {
+		return errors.InternalServerError(c, err.Error())
+	}
+	club, err := crud.GetClub(clubId)
+	if err != nil {
+		return errors.InternalServerError(c, err.Error())
+	}
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data": fiber.Map{
+			"club":     club,
+			"users":    users,
+			"comments": "{}",
+			"chat":     "{}",
+		},
+	})
+}
+
+func leaveClub(c *fiber.Ctx) error {
+	clubId := c.Params("club_id")
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	_, err = crud.DeleteClubUser(clubId, string(uidBytes))
+	if err != nil {
+		if err == pg.ErrNoRows {
+			return errors.ConflictError(c, "You are not a member of this club")
+		}
+		return errors.InternalServerError(c, err.Error())
+	}
+	return c.JSON(fiber.Map{
+		"status":  "success",
+		"message": "You have left the club",
 	})
 }
 
@@ -66,4 +120,6 @@ func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup := app.Group("/api/clubs", middleware)
 	authGroup.Post("", createClub)
 	authGroup.Post("joinclub/:club_id", joinClub)
+	authGroup.Get(":club_id", getClub)
+	authGroup.Post("leaveclub/:club_id", leaveClub)
 }

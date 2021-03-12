@@ -10,5 +10,5 @@ type Club struct {
 	FileURL  string    `pg:",notnull" json:"file_url"`
 	PageNo   int       `json:"page_no"`
 	Private  bool      `pg:",notnull" json:"private"`
-	HostID   uuid.UUID `pg:",type:uuid,notnull" json:"host_id"`
+	HostID   uuid.UUID `pg:",type:uuid" json:"host_id"`
 }

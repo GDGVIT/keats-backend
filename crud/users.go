@@ -99,7 +99,7 @@ func GetUserClub(id string) ([]*models.Club, error) {
 	var clubs []*models.Club
 	err = db.Model(&clubs).
 		Join("INNER JOIN club_users as cu").
-		JoinOn("cu.club_id = club.id").
+		JoinOn("cu.club_id = \"club\".\"id\"").
 		Where("cu.user_id = ?", uid).
 		Select()
 	if err != nil {

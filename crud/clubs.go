@@ -30,6 +30,14 @@ func CreateClub(objIn *schemas.ClubCreate) (*models.Club, error) {
 		return nil, err
 	}
 
+	clubuser := &models.ClubUser{
+		ClubID: club.ID,
+		UserID: uid,
+	}
+	_, err = db.Model(clubuser).Returning("*").Insert()
+	if err != nil {
+		return nil, err
+	}
 	return club, nil
 }
 
@@ -96,20 +104,72 @@ func CreateClubUser(ClubId string, UserId string) (*models.ClubUser, error) {
 }
 
 // GetClubUser get clubuser records from database
-func GetClubUser(ClubId string) ([]models.User, error) {
+func GetClubUser(ClubId string) ([]*models.User, error) {
 	db := pgdb.GetDB()
 	cid, err := uuid.Parse(ClubId)
 	if err != nil {
 		return nil, err
 	}
-	var users []models.User
+	var users []*models.User
 	err = db.Model(&users).
-		Join("INNER JOIN clubusers").
-		JoinOn("user.id = clubusers.user_id").
-		Where("clubusers.club_id = ?", cid).
+		ColumnExpr("\"user\".\"id\" , \"user\".\"username\", \"user\".\"profile_pic\"").
+		Join("INNER JOIN club_users as cu").
+		JoinOn("cu.user_id = \"user\".\"id\"").
+		Where("cu.club_id = ?", cid).
 		Select()
 	if err != nil {
 		return nil, err
 	}
 	return users, nil
+}
+
+// DeleteClubUser deletes clubuser record from database
+func DeleteClubUser(ClubId string, UserId string) (*models.ClubUser, error) {
+	db := pgdb.GetDB()
+	cid, err := uuid.Parse(ClubId)
+	if err != nil {
+		return nil, err
+	}
+	uid, err := uuid.Parse(UserId)
+	if err != nil {
+		return nil, err
+	}
+	clubuser := &models.ClubUser{
+		ClubID: cid,
+		UserID: uid,
+	}
+	_, err = db.Model(clubuser).Where("user_id = ?user_id and club_id = ?club_id").Delete()
+	if err != nil {
+		return nil, err
+	}
+	var users []*models.User
+	err = db.Model(&users).
+		ColumnExpr("\"user\".\"id\" , \"user\".\"username\", \"user\".\"profile_pic\"").
+		Join("INNER JOIN club_users as cu").
+		JoinOn("cu.user_id = \"user\".\"id\"").
+		Where("cu.club_id = ?", cid).
+		Select()
+	if err != nil {
+		return nil, err
+	}
+	// Reset Host ID to someone else if host themselves is leaving
+	club := &models.Club{
+		ID: cid,
+	}
+	err = db.Model(club).WherePK().Select()
+	if err != nil {
+		return nil, err
+	}
+	if club.HostID == uid {
+		if len(users) != 0 {
+			club.HostID = users[0].ID
+		} else {
+			club.HostID = uuid.Nil
+		}
+		_, err = db.Model(club).WherePK().Update()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return clubuser, err
 }
