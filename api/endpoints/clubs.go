@@ -7,7 +7,12 @@ import (
 	"github.com/Krishap-s/keats-backend/schemas"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
+	"log"
 )
+
+type club_requests struct {
+	ClubID string `json:"club_id"`
+}
 
 func createClub(c *fiber.Ctx) error {
 	club := new(schemas.ClubCreate)
@@ -32,7 +37,11 @@ func createClub(c *fiber.Ctx) error {
 }
 
 func joinClub(c *fiber.Ctx) error {
-	clubId := c.Params("club_id")
+	r := new(club_requests)
+	if err := c.BodyParser(r); err != nil {
+		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+	}
+	clubId := r.ClubID
 	club, err := crud.GetClub(clubId)
 	if err != nil {
 		return errors.NotFoundError(c, "Club not found")
@@ -65,10 +74,11 @@ func joinClub(c *fiber.Ctx) error {
 }
 
 func getClub(c *fiber.Ctx) error {
-	clubId := c.Params("club_id")
+	clubId := c.Query("club_id")
 	users, err := crud.GetClubUser(clubId)
 	user := c.Locals("user").(*models.User)
 	var is_member bool = false
+	log.Println(users)
 	for _, clubUser := range users {
 		if clubUser.ID == user.ID {
 			is_member = true
@@ -97,7 +107,11 @@ func getClub(c *fiber.Ctx) error {
 }
 
 func leaveClub(c *fiber.Ctx) error {
-	clubId := c.Params("club_id")
+	r := new(club_requests)
+	if err := c.BodyParser(r); err != nil {
+		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+	}
+	clubId := r.ClubID
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
@@ -119,7 +133,7 @@ func leaveClub(c *fiber.Ctx) error {
 func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup := app.Group("/api/clubs", middleware)
 	authGroup.Post("", createClub)
-	authGroup.Post("joinclub/:club_id", joinClub)
-	authGroup.Get(":club_id", getClub)
-	authGroup.Post("leaveclub/:club_id", leaveClub)
+	authGroup.Post("joinclub", joinClub)
+	authGroup.Get("", getClub)
+	authGroup.Post("leaveclub", leaveClub)
 }
