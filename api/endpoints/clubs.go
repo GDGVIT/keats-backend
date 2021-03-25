@@ -7,7 +7,6 @@ import (
 	"github.com/Krishap-s/keats-backend/schemas"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
-	"log"
 )
 
 type club_requests struct {
@@ -60,14 +59,22 @@ func joinClub(c *fiber.Ctx) error {
 		}
 		return errors.InternalServerError(c, "")
 	}
-
+	hidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	hostUser, err := crud.GetUser(string(hidBytes))
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
-			"club":     club,
-			"users":    users,
-			"comments": "{}",
-			"chat":     "{}",
+			"club":      club,
+			"host_user": hostUser,
+			"users":     users,
+			"comments":  "{}",
+			"chat":      "{}",
 		},
 		"message": "Club joined successfully",
 	})
@@ -78,7 +85,6 @@ func getClub(c *fiber.Ctx) error {
 	users, err := crud.GetClubUser(clubId)
 	user := c.Locals("user").(*models.User)
 	var is_member bool = false
-	log.Println(users)
 	for _, clubUser := range users {
 		if clubUser.ID == user.ID {
 			is_member = true
@@ -95,13 +101,22 @@ func getClub(c *fiber.Ctx) error {
 	if err != nil {
 		return errors.InternalServerError(c, err.Error())
 	}
+	hidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	hostUser, err := crud.GetUser(string(hidBytes))
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
-			"club":     club,
-			"users":    users,
-			"comments": "{}",
-			"chat":     "{}",
+			"club":      club,
+			"host_user": hostUser,
+			"users":     users,
+			"comments":  "{}",
+			"chat":      "{}",
 		},
 	})
 }
