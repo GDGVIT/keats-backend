@@ -143,7 +143,7 @@ func getUser(c *fiber.Ctx) error {
 	})
 }
 
-func getUserClubs(c *fiber.Ctx) error {
+func getUserClubsAndDetails(c *fiber.Ctx) error {
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
@@ -159,7 +159,10 @@ func getUserClubs(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{
 		"status": "success",
-		"data":   clubs,
+		"data": fiber.Map{
+			"clubs": clubs,
+			"user":  c.Locals("user"),
+		},
 	})
 
 }
@@ -171,5 +174,5 @@ func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup.Patch("user", updateUser)
 	authGroup.Post("user/updatephone", updateUserPhoneNo)
 	authGroup.Get("user", getUser)
-	authGroup.Get("user/clubs", getUserClubs)
+	authGroup.Get("user/clubs", getUserClubsAndDetails)
 }
