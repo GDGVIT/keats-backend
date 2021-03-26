@@ -89,19 +89,22 @@ func DeleteUser(id string) (*models.User, error) {
 }
 
 // GetUserClub gets clubuser records from the database
-func GetUserClub(id string) ([]*models.Club, error) {
+func GetUserClub(id string) ([]*schemas.Club, error) {
 	db := pgdb.GetDB()
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
 
-	var clubs []*models.Club
-	err = db.Model(&clubs).
+	var clubs []*schemas.Club
+	err = db.Model((*models.Club)(nil)).
+		ColumnExpr("club.id,club.club_name,club.file_url,club.page_no,club.private,club.host_id,u.id,u.username as host_name,u.profile_pic as host_profile_pic").
 		Join("INNER JOIN club_users as cu").
 		JoinOn("cu.club_id = \"club\".\"id\"").
+		Join("INNER JOIN users as u").
+		JoinOn("club.host_id = u.id").
 		Where("cu.user_id = ?", uid).
-		Select()
+		Select(&clubs)
 	if err != nil {
 		return nil, err
 	}

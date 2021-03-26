@@ -59,22 +59,14 @@ func joinClub(c *fiber.Ctx) error {
 		}
 		return errors.InternalServerError(c, "")
 	}
-	hidBytes, err := user.ID.MarshalText()
-	if err != nil {
-		return errors.InternalServerError(c, "")
-	}
-	hostUser, err := crud.GetUser(string(hidBytes))
-	if err != nil {
-		return errors.InternalServerError(c, "")
-	}
+
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
-			"club":      club,
-			"host_user": hostUser,
-			"users":     users,
-			"comments":  "{}",
-			"chat":      "{}",
+			"club":     club,
+			"users":    users,
+			"comments": "{}",
+			"chat":     "{}",
 		},
 		"message": "Club joined successfully",
 	})
@@ -101,22 +93,13 @@ func getClub(c *fiber.Ctx) error {
 	if err != nil {
 		return errors.InternalServerError(c, err.Error())
 	}
-	hidBytes, err := user.ID.MarshalText()
-	if err != nil {
-		return errors.InternalServerError(c, "")
-	}
-	hostUser, err := crud.GetUser(string(hidBytes))
-	if err != nil {
-		return errors.InternalServerError(c, "")
-	}
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
-			"club":      club,
-			"host_user": hostUser,
-			"users":     users,
-			"comments":  "{}",
-			"chat":      "{}",
+			"club":     club,
+			"users":    users,
+			"comments": "{}",
+			"chat":     "{}",
 		},
 	})
 }

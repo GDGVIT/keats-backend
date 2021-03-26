@@ -65,20 +65,26 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 }
 
 // GetClub gets a club from the database or returns an error
-func GetClub(id string) (*models.Club, error) {
+func GetClub(id string) (*schemas.Club, error) {
 	db := pgdb.GetDB()
 	cid, err := uuid.Parse(id)
+	res := new(schemas.Club)
 	if err != nil {
 		return nil, err
 	}
 	club := &models.Club{
 		ID: cid,
 	}
-	err = db.Model(club).WherePK().Select()
+	err = db.Model(club).
+		ColumnExpr("club.id,club.club_name,club.file_url,club.page_no,club.private,club.host_id,u.id,u.username as host_name,u.profile_pic as host_profile_pic").
+		Join("INNER JOIN users as u").
+		JoinOn("club.host_id = u.id").
+		WherePK().
+		Select(res)
 	if err != nil {
 		return nil, err
 	}
-	return club, nil
+	return res, nil
 }
 
 // CreateClubUser creates a clubuser record in the database
@@ -114,7 +120,7 @@ func GetClubUser(ClubId string) ([]*models.User, error) {
 	err = db.Model(&users).
 		ColumnExpr("\"user\".\"id\" , \"user\".\"username\", \"user\".\"profile_pic\"").
 		Join("INNER JOIN club_users as cu").
-		JoinOn("cu.user_id = \"user\".\"id\"").
+		JoinOn("cu.user_id = \"user\".id").
 		Where("cu.club_id = ?", cid).
 		Select()
 	if err != nil {

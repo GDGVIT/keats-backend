@@ -24,11 +24,13 @@ type ClubUpdate struct {
 
 // Club represents a room to be returned as a response
 type Club struct {
-	ID       string `json:"id"`
-	ClubName string `json:"clubname"`
-	FileURL  string `json:"file_url"`
-	PageNo   int    `json:"page_no"`
-	Private  bool   `json:"private"`
-	PageSync bool   `json:"page_sync"`
-	HostID   string `json:"host_id"`
+	ID             string `json:"id"`
+	ClubName       string `json:"clubname"`
+	FileURL        string `json:"file_url"`
+	PageNo         int    `json:"page_no"`
+	Private        bool   `json:"private"`
+	PageSync       bool   `json:"page_sync"`
+	HostID         string `json:"host_id"`
+	HostName       string `json:"host_name"`
+	HostProfilePic string `json:"host_profile_pic"`
 }
