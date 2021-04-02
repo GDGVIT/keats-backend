@@ -16,6 +16,7 @@ func CreateClub(objIn *schemas.ClubCreate) (*models.Club, error) {
 	}
 	club := &models.Club{
 		ClubName: objIn.ClubName,
+		ClubPic:  objIn.ClubPic,
 		PageSync: objIn.PageSync,
 		FileURL:  objIn.FileURL,
 		Private:  objIn.Private,
@@ -51,6 +52,7 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 	club := &models.Club{
 		ID:       uid,
 		ClubName: objIn.ClubName,
+		ClubPic:  objIn.ClubPic,
 		FileURL:  objIn.FileURL,
 		Private:  objIn.Private,
 		PageSync: objIn.PageSync,
@@ -76,7 +78,7 @@ func GetClub(id string) (*schemas.Club, error) {
 		ID: cid,
 	}
 	err = db.Model(club).
-		ColumnExpr("club.id,club.club_name,club.file_url,club.page_no,club.private,club.host_id,u.id as host_id,u.username as host_name,u.profile_pic as host_profile_pic").
+		ColumnExpr("club.id,club.club_name,club.club_pic,club.file_url,club.page_no,club.private,club.host_id,u.id as host_id,u.username as host_name,u.profile_pic as host_profile_pic").
 		Join("INNER JOIN users as u").
 		JoinOn("club.host_id = u.id").
 		WherePK().

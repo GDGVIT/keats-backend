@@ -4,6 +4,7 @@ package schemas
 type ClubCreate struct {
 	ID       string `json:"id"`
 	ClubName string `json:"clubname"`
+	ClubPic  string `json:"club_pic"`
 	FileURL  string `json:"file_url"`
 	PageNo   int    `json:"page_no"`
 	Private  bool   `json:"private"`
@@ -15,6 +16,7 @@ type ClubCreate struct {
 type ClubUpdate struct {
 	ID       string `json:"id"`
 	ClubName string `json:"clubname"`
+	ClubPic  string `json:"club_pic"`
 	FileURL  string `json:"file_url"`
 	PageNo   int    `json:"page_no"`
 	Private  bool   `json:"private"`
@@ -26,6 +28,7 @@ type ClubUpdate struct {
 type Club struct {
 	ID             string `json:"id"`
 	ClubName       string `json:"clubname"`
+	ClubPic        string `json:"club_pic"`
 	FileURL        string `json:"file_url"`
 	PageNo         int    `json:"page_no"`
 	Private        bool   `json:"private"`

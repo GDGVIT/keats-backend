@@ -6,6 +6,7 @@ import "github.com/google/uuid"
 type Club struct {
 	ID       uuid.UUID `pg:",pk,type:uuid,default:uuid_generate_v4()" json:"id"`
 	ClubName string    `pg:",notnull" json:"clubname"`
+	ClubPic  string    `json:"club_pic"`
 	PageSync bool      `pg:",notnull" json:"page_sync"`
 	FileURL  string    `pg:",notnull" json:"file_url"`
 	PageNo   int       `json:"page_no"`

@@ -98,11 +98,11 @@ func GetUserClub(id string) ([]*schemas.Club, error) {
 
 	var clubs []*schemas.Club
 	err = db.Model((*models.Club)(nil)).
-		ColumnExpr("\"club\".\"id\",\"club\".\"club_name\",\"club\".\"file_url\",\"club\".\"page_no\",\"club\".\"private\",\"club\".\"host_id\",u.id as host_id,u.username as host_name,u.profile_pic as host_profile_pic").
+		ColumnExpr("club.id,club.club_name,club.club_pic,club.file_url,club.page_no,club.private,club.host_id,u.id as host_id,u.username as host_name,u.profile_pic as host_profile_pic").
 		Join("INNER JOIN club_users as cu").
-		JoinOn("cu.club_id = \"club\".\"id\"").
+		JoinOn("cu.club_id = club.id").
 		Join("INNER JOIN users as u").
-		JoinOn("\"club\".\"host_id\" = u.id").
+		JoinOn("club.host_id = u.id").
 		Where("cu.user_id = ?", uid).
 		Select(&clubs)
 	if err != nil {
