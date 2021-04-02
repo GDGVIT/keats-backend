@@ -76,7 +76,7 @@ func GetClub(id string) (*schemas.Club, error) {
 		ID: cid,
 	}
 	err = db.Model(club).
-		ColumnExpr("club.id,club.club_name,club.file_url,club.page_no,club.private,club.host_id,u.id,u.username as host_name,u.profile_pic as host_profile_pic").
+		ColumnExpr("club.id,club.club_name,club.file_url,club.page_no,club.private,club.host_id,u.id as host_id,u.username as host_name,u.profile_pic as host_profile_pic").
 		Join("INNER JOIN users as u").
 		JoinOn("club.host_id = u.id").
 		WherePK().
