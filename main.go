@@ -33,13 +33,12 @@ func main() {
 	app := fiber.New()
 
 	// Use Middleware
-	app.Use(limiter.New(configs.LimiterConfig))
-	app.Use(logger.New(configs.LoggerConfig))
-	app.Use(recover.New(configs.RecoverConfig))
+	app.Use(limiter.New(configs.LimiterConfig()))
+	app.Use(logger.New(configs.LoggerConfig()))
+	app.Use(recover.New(configs.RecoverConfig()))
 
-	// Set Up JWT middleware
-	jwtconf := configs.JWTConfig
-	jwtconf.SigningKey = []byte(configs.GetSecret())
+	// Setting up jwt config
+	jwtconf := configs.JWTConfig()
 
 	app.Get("/", healthCheck)
 

@@ -23,28 +23,31 @@ func GetSecret() string {
 	return secret
 }
 
-var JWTConfig = jwtware.Config{
-	ErrorHandler: func(c *fiber.Ctx, err error) error {
-		if err.Error() == "Missing or malformed JWT" {
-			return errors.BadRequestError(c, "Missing or malformed JWT")
-		} else {
-			return errors.UnauthorizedError(c, "Invalid JWT")
-		}
-	},
-	SuccessHandler: func(c *fiber.Ctx) error {
-		token := c.Locals("user").(*jwt.Token)
-		claims := token.Claims.(jwt.MapClaims)
-		id := claims["id"].(string)
-		user, err := crud.GetUser(id)
-		if err != nil {
-			if err == pg.ErrNoRows {
-				return errors.UnauthorizedError(c, "Invalid JWT")
+func JWTConfig() jwtware.Config {
+	return jwtware.Config{
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			if err.Error() == "Missing or malformed JWT" {
+				return errors.BadRequestError(c, "Missing or malformed JWT")
 			} else {
-				return errors.InternalServerError(c, "")
+				return errors.UnauthorizedError(c, "Invalid JWT")
 			}
-		}
-		c.Locals("user", user)
-		return c.Next()
-	},
-	SigningMethod: "HS256",
+		},
+		SuccessHandler: func(c *fiber.Ctx) error {
+			token := c.Locals("user").(*jwt.Token)
+			claims := token.Claims.(jwt.MapClaims)
+			id := claims["id"].(string)
+			user, err := crud.GetUser(id)
+			if err != nil {
+				if err == pg.ErrNoRows {
+					return errors.UnauthorizedError(c, "Invalid JWT")
+				} else {
+					return errors.InternalServerError(c, "")
+				}
+			}
+			c.Locals("user", user)
+			return c.Next()
+		},
+		SigningKey:    []byte(GetSecret()),
+		SigningMethod: "HS256",
+	}
 }

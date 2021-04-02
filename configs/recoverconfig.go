@@ -4,6 +4,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
-var RecoverConfig = recover.Config{
-	EnableStackTrace: true,
+func RecoverConfig() recover.Config {
+	return recover.Config{
+		EnableStackTrace: true,
+	}
 }

@@ -1,7 +1,7 @@
 package configs
 
-import (
-	"github.com/gofiber/fiber/v2/middleware/logger"
-)
+import "github.com/gofiber/fiber/v2/middleware/logger"
 
-var LoggerConfig = logger.Config{}
+func LoggerConfig() logger.Config {
+	return logger.Config{}
+}

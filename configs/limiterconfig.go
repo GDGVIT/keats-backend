@@ -9,8 +9,10 @@ import (
 	"github.com/Krishap-s/keats-backend/errors"
 )
 
-var LimiterConfig = limiter.Config{
-	Max:          viper.GetInt("MAX_REQUESTS"),
-	Duration:     time.Duration(viper.GetInt("TIME_PERIOD_IN_MINUTES")) * time.Minute,
-	LimitReached: errors.TooManyRequestsError,
+func LimiterConfig() limiter.Config {
+	return limiter.Config{
+		Max:          viper.GetInt("MAX_REQUESTS"),
+		Expiration:   time.Duration(viper.GetInt("TIME_PERIOD_IN_MINUTES")) * time.Minute,
+		LimitReached: errors.TooManyRequestsError,
+	}
 }
