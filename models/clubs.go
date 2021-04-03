@@ -10,6 +10,6 @@ type Club struct {
 	PageSync bool      `pg:",notnull" json:"page_sync"`
 	FileURL  string    `pg:",notnull" json:"file_url"`
 	PageNo   int       `json:"page_no"`
-	Private  bool      `pg:",notnull" json:"private"`
+	Private  bool      `json:"private"`
 	HostID   uuid.UUID `pg:",type:uuid" json:"host_id"`
 }
