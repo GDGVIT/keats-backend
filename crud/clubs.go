@@ -66,6 +66,19 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 	return club, nil
 }
 
+// ListClub gets all non-private clubs from database or returns an error
+func ListClub() ([]*schemas.Club, error) {
+	db := pgdb.GetDB()
+	var clubs []*schemas.Club
+	err := db.Model((*models.Club)(nil)).
+		Where("private = false").
+		Select(&clubs)
+	if err != nil {
+		return nil, err
+	}
+	return clubs, nil
+}
+
 // GetClub gets a club from the database or returns an error
 func GetClub(id string) (*schemas.Club, error) {
 	db := pgdb.GetDB()

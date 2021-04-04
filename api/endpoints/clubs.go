@@ -72,6 +72,20 @@ func joinClub(c *fiber.Ctx) error {
 	})
 }
 
+func listClubs(c *fiber.Ctx) error {
+	clubs, err := crud.ListClub()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	if clubs == nil {
+		return errors.NotFoundError(c, "No public clubs found")
+	}
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data":   clubs,
+	})
+}
+
 func getClub(c *fiber.Ctx) error {
 	clubId := c.Query("club_id")
 	users, err := crud.GetClubUser(clubId)
@@ -191,9 +205,10 @@ func leaveClub(c *fiber.Ctx) error {
 
 func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup := app.Group("/api/clubs", middleware)
+	authGroup.Get("", getClub)
+	authGroup.Get("listclubs", listClubs)
 	authGroup.Post("createclub", createClub)
 	authGroup.Post("joinclub", joinClub)
-	authGroup.Get("", getClub)
 	authGroup.Patch("updateclub", updateClub)
 	authGroup.Post("kickuser", kickUser)
 	authGroup.Post("leaveclub", leaveClub)
