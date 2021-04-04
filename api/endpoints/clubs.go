@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type club_requests struct {
+type clubRequests struct {
 	ClubID string `json:"club_id"`
 }
 
@@ -36,7 +36,7 @@ func createClub(c *fiber.Ctx) error {
 }
 
 func joinClub(c *fiber.Ctx) error {
-	r := new(club_requests)
+	r := new(clubRequests)
 	if err := c.BodyParser(r); err != nil {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
@@ -76,14 +76,14 @@ func getClub(c *fiber.Ctx) error {
 	clubId := c.Query("club_id")
 	users, err := crud.GetClubUser(clubId)
 	user := c.Locals("user").(*models.User)
-	var is_member bool = false
+	var isMember = false
 	for _, clubUser := range users {
 		if clubUser.ID == user.ID {
-			is_member = true
+			isMember = true
 			break
 		}
 	}
-	if !is_member {
+	if !isMember {
 		return errors.UnauthorizedError(c, "You are not a member of this club")
 	}
 	if err != nil {
@@ -104,8 +104,37 @@ func getClub(c *fiber.Ctx) error {
 	})
 }
 
+func updateClub(c *fiber.Ctx) error {
+	r := new(schemas.ClubUpdate)
+	if err := c.BodyParser(r); err != nil {
+		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+	}
+	clubId := r.ID
+	club, err := crud.GetClub(clubId)
+	if err != nil {
+		return errors.NotFoundError(c, "Club not found")
+	}
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	uid := string(uidBytes)
+	if uid != club.HostID {
+		return errors.UnauthorizedError(c, "You are not the host of this group")
+	}
+	updated, err := crud.UpdateClub(r)
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data":   updated,
+	})
+}
+
 func leaveClub(c *fiber.Ctx) error {
-	r := new(club_requests)
+	r := new(clubRequests)
 	if err := c.BodyParser(r); err != nil {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
@@ -130,8 +159,9 @@ func leaveClub(c *fiber.Ctx) error {
 
 func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup := app.Group("/api/clubs", middleware)
-	authGroup.Post("", createClub)
+	authGroup.Post("createclub", createClub)
 	authGroup.Post("joinclub", joinClub)
 	authGroup.Get("", getClub)
+	authGroup.Patch("updateclub", updateClub)
 	authGroup.Post("leaveclub", leaveClub)
 }
