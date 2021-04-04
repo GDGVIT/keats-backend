@@ -37,7 +37,7 @@ func createClub(c *fiber.Ctx) error {
 
 func joinClub(c *fiber.Ctx) error {
 	r := new(clubRequests)
-	if err := c.BodyParser(r); err != nil {
+	if err := c.BodyParser(r); err != nil || r.ClubID == "" {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
 	clubId := r.ClubID
@@ -106,7 +106,7 @@ func getClub(c *fiber.Ctx) error {
 
 func updateClub(c *fiber.Ctx) error {
 	r := new(schemas.ClubUpdate)
-	if err := c.BodyParser(r); err != nil {
+	if err := c.BodyParser(r); err != nil || r.ID == "" {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
 	clubId := r.ID
@@ -133,9 +133,41 @@ func updateClub(c *fiber.Ctx) error {
 	})
 }
 
+func kickUser(c *fiber.Ctx) error {
+	r := new(struct {
+		UserID string `json:"user_id"`
+		ClubID string `json:"club_id"`
+	})
+	if err := c.BodyParser(r); err != nil || r.UserID == "" || r.ClubID == "" {
+		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+	}
+	clubId := r.ClubID
+	deviantId := r.UserID
+	club, err := crud.GetClub(clubId)
+	if err != nil {
+		return errors.NotFoundError(c, "Club not found")
+	}
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	uid := string(uidBytes)
+	if uid != club.HostID {
+		return errors.UnauthorizedError(c, "You are not the host of this group")
+	} else if uid == deviantId {
+		return errors.ConflictError(c, "You cannot kick yourself out of the club")
+	}
+	_, err = crud.DeleteClubUser(clubId, r.UserID)
+	return c.JSON(fiber.Map{
+		"status":  "success",
+		"message": "User has been kicked from the club",
+	})
+}
+
 func leaveClub(c *fiber.Ctx) error {
 	r := new(clubRequests)
-	if err := c.BodyParser(r); err != nil {
+	if err := c.BodyParser(r); err != nil || r.ClubID == "" {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
 	clubId := r.ClubID
@@ -163,5 +195,6 @@ func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup.Post("joinclub", joinClub)
 	authGroup.Get("", getClub)
 	authGroup.Patch("updateclub", updateClub)
+	authGroup.Post("kickuser", kickUser)
 	authGroup.Post("leaveclub", leaveClub)
 }
