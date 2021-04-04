@@ -206,10 +206,10 @@ func leaveClub(c *fiber.Ctx) error {
 func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup := app.Group("/api/clubs", middleware)
 	authGroup.Get("", getClub)
-	authGroup.Get("listclubs", listClubs)
-	authGroup.Post("createclub", createClub)
-	authGroup.Post("joinclub", joinClub)
-	authGroup.Patch("updateclub", updateClub)
+	authGroup.Get("list", listClubs)
+	authGroup.Post("create", createClub)
+	authGroup.Post("join", joinClub)
+	authGroup.Patch("update", updateClub)
 	authGroup.Post("kickuser", kickUser)
-	authGroup.Post("leaveclub", leaveClub)
+	authGroup.Post("leave", leaveClub)
 }
