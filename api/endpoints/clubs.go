@@ -84,7 +84,13 @@ func joinClub(c *fiber.Ctx) error {
 }
 
 func listClubs(c *fiber.Ctx) error {
-	clubs, err := crud.ListClub()
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	uid := string(uidBytes)
+	clubs, err := crud.ListClub(uid)
 	if err != nil {
 		return errors.InternalServerError(c, "")
 	}
