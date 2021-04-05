@@ -54,8 +54,6 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 		ClubName: objIn.ClubName,
 		ClubPic:  objIn.ClubPic,
 		FileURL:  objIn.FileURL,
-		Private:  objIn.Private,
-		PageSync: objIn.PageSync,
 	}
 
 	_, err = db.Model(club).Returning("*").WherePK().UpdateNotZero()
@@ -64,6 +62,32 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 	}
 
 	return club, nil
+}
+
+// TogglePrivate toggles the private status of a club
+func TogglePrivate(ClubID string) error {
+	db := pgdb.GetDB()
+	_, err := db.Model((*models.Club)(nil)).
+		Set("private = NOT private").
+		Where("id = ?", ClubID).
+		Update()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ToggleSync toggles the page sync feature of a club
+func ToggleSync(ClubID string) error {
+	db := pgdb.GetDB()
+	_, err := db.Model((*models.Club)(nil)).
+		Set("page_sync = NOT page_sync").
+		Where("id = ?", ClubID).
+		Update()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ListClub gets all non-private clubs from database or returns an error
@@ -136,7 +160,6 @@ func GetClubUser(ClubId string) ([]*models.User, error) {
 	}
 	var users []*models.User
 	err = db.Model(&users).
-		ColumnExpr("\"user\".\"id\" , \"user\".\"username\", \"user\".\"profile_pic\"").
 		Join("INNER JOIN club_users as cu").
 		JoinOn("cu.user_id = \"user\".id").
 		Where("cu.club_id = ?", cid).
@@ -168,7 +191,7 @@ func DeleteClubUser(ClubId string, UserId string) (*models.ClubUser, error) {
 	}
 	var users []*models.User
 	err = db.Model(&users).
-		ColumnExpr("\"user\".\"id\" , \"user\".\"username\", \"user\".\"profile_pic\"").
+		ColumnExpr("\"user\".\"id\" , \"user\".\"username\", \"user\".\"profile_pic\", \"user\".\"phone_no\", \"user\".\"email\", \"user\".\"bio\"").
 		Join("INNER JOIN club_users as cu").
 		JoinOn("cu.user_id = \"user\".\"id\"").
 		Where("cu.club_id = ?", cid).

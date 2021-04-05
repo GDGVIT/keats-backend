@@ -13,6 +13,17 @@ type clubRequests struct {
 	ClubID string `json:"club_id"`
 }
 
+func checkIfHost(UserId string, ClubId string) (bool, error) {
+	club, err := crud.GetClub(ClubId)
+	if err != nil {
+		return false, err
+	}
+	if UserId != club.HostID {
+		return false, nil
+	}
+	return true, nil
+}
+
 func createClub(c *fiber.Ctx) error {
 	club := new(schemas.ClubCreate)
 	if err := c.BodyParser(club); err != nil {
@@ -123,18 +134,17 @@ func updateClub(c *fiber.Ctx) error {
 	if err := c.BodyParser(r); err != nil || r.ID == "" {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
-	clubId := r.ID
-	club, err := crud.GetClub(clubId)
-	if err != nil {
-		return errors.NotFoundError(c, "Club not found")
-	}
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
 		return errors.InternalServerError(c, "")
 	}
 	uid := string(uidBytes)
-	if uid != club.HostID {
+	check, err := checkIfHost(uid, r.ID)
+	if err != nil {
+		return errors.NotFoundError(c, "Club not found")
+	}
+	if !check {
 		return errors.UnauthorizedError(c, "You are not the host of this group")
 	}
 	updated, err := crud.UpdateClub(r)
@@ -144,6 +154,68 @@ func updateClub(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data":   updated,
+	})
+}
+
+func togglePrivate(c *fiber.Ctx) error {
+	r := new(struct {
+		ID string `json:"id"`
+	})
+	if err := c.BodyParser(r); err != nil {
+		return errors.BadRequestError(c, "JSON in the incorrect format")
+	}
+
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	uid := string(uidBytes)
+	check, err := checkIfHost(uid, r.ID)
+	if err != nil {
+		return errors.NotFoundError(c, "Club not found")
+	}
+	if !check {
+		return errors.UnauthorizedError(c, "You are not the host of this group")
+	}
+	err = crud.TogglePrivate(r.ID)
+	if err != nil {
+		return errors.InternalServerError(c, err.Error())
+	}
+	return c.JSON(fiber.Map{
+		"status":  "success",
+		"message": "Club private feature has been toggled",
+	})
+}
+
+func toggleSync(c *fiber.Ctx) error {
+	r := new(struct {
+		ID string `json:"id"`
+	})
+	if err := c.BodyParser(r); err != nil {
+		return errors.BadRequestError(c, "JSON in the incorrect format")
+	}
+
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	uid := string(uidBytes)
+	check, err := checkIfHost(uid, r.ID)
+	if err != nil {
+		return errors.NotFoundError(c, "Club not found")
+	}
+	if !check {
+		return errors.UnauthorizedError(c, "You are not the host of this group")
+	}
+	err = crud.ToggleSync(r.ID)
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	return c.JSON(fiber.Map{
+		"status":  "success",
+		"message": "Club page sync feature has been toggled",
 	})
 }
 
@@ -210,6 +282,8 @@ func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup.Post("create", createClub)
 	authGroup.Post("join", joinClub)
 	authGroup.Patch("update", updateClub)
+	authGroup.Post("toggleprivate", togglePrivate)
+	authGroup.Post("togglesync", toggleSync)
 	authGroup.Post("kickuser", kickUser)
 	authGroup.Post("leave", leaveClub)
 }

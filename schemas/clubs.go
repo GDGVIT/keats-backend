@@ -19,8 +19,6 @@ type ClubUpdate struct {
 	ClubPic  string `json:"club_pic"`
 	FileURL  string `json:"file_url"`
 	PageNo   int    `json:"page_no"`
-	Private  bool   `json:"private"`
-	PageSync bool   `json:"page_sync"`
 	HostID   string `json:"host_id"`
 }
 
