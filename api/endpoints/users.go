@@ -2,16 +2,20 @@ package endpoints
 
 import (
 	"context"
-	jwt "github.com/form3tech-oss/jwt-go"
-	"github.com/go-pg/pg/v10"
-	"github.com/gofiber/fiber/v2"
-
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/errors"
 	"github.com/Krishap-s/keats-backend/firebaseclient"
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/schemas"
+	jwt "github.com/form3tech-oss/jwt-go"
+	"github.com/go-pg/pg/v10"
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/h2non/filetype"
+	"github.com/spf13/viper"
+	"io"
+	"log"
 )
 
 type IDTokenRequest struct {
@@ -170,6 +174,59 @@ func getUserClubsAndDetails(c *fiber.Ctx) error {
 
 }
 
+func uploadFile(c *fiber.Ctx) error {
+	r, err := c.FormFile("file")
+	if err != nil {
+		return errors.BadRequestError(c, "Error finding or parsing file")
+	}
+	bucketName := viper.GetString("FIREBASE_BUCKET_NAME")
+	//Open form file reader
+	file, err := r.Open()
+	if err != nil {
+		return errors.BadRequestError(c, "Error parsing file")
+	}
+	//Close file when function ends
+	defer file.Close()
+	data := make([]byte, r.Size)
+	_, err = file.Read(data)
+	//Resets file pointer
+	if err != nil {
+		return errors.BadRequestError(c, "Error parsing file")
+	}
+	file.Seek(0, 0)
+	if !(filetype.IsMIME(data, "application/pdf") || filetype.IsMIME(data, "application/epub+xml") || filetype.IsMIME(data, "image/png")) {
+		return errors.BadRequestError(c, "Invalid file type")
+	}
+	bucketClient, err := firebaseclient.GetBucket()
+	if err != nil {
+		log.Println(err.Error())
+		return errors.InternalServerError(c, "")
+	}
+	bucket, err := bucketClient.Bucket(bucketName)
+	if err != nil {
+		log.Println(err.Error())
+		return errors.InternalServerError(c, "")
+	}
+	fid := uuid.NewString()
+	filePath := "public/" + fid
+	wc := bucket.Object(filePath).NewWriter(context.Background())
+	if _, err = io.Copy(wc, file); err != nil {
+		log.Println(err.Error())
+		return errors.InternalServerError(c, "")
+	}
+	if err = wc.Close(); err != nil {
+		log.Println(err.Error())
+		return errors.InternalServerError(c, "")
+	}
+
+	fileURL := "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/public%2f" + fid + "?alt=media"
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data":   fileURL,
+	})
+
+}
+
 // MountUserRoutes mounts all routes declared here
 func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	app.Post("/api/user", createUser)
@@ -178,4 +235,5 @@ func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup.Post("user/updatephone", updateUserPhoneNo)
 	authGroup.Get("user", getUser)
 	authGroup.Get("user/clubs", getUserClubsAndDetails)
+	app.Post("/api/uploadfile", uploadFile, middleware)
 }
