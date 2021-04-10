@@ -63,7 +63,10 @@ func createUser(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"status": "success",
-		"data":   signedtoken,
+		"data": fiber.Map{
+			"token":   signedtoken,
+			"user_id": created.ID,
+		},
 	})
 }
 
