@@ -12,11 +12,10 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/h2non/filetype"
 	"github.com/spf13/viper"
 	"io"
-	"io/ioutil"
 	"log"
+	"net/http"
 )
 
 type IDTokenRequest struct {
@@ -186,13 +185,15 @@ func uploadFile(c *fiber.Ctx) error {
 		}
 		//Close file when function ends
 		defer file.Close()
-		fileData, err := ioutil.ReadAll(file)
-		//Resets file pointer
-		file.Seek(0, 0)
+		fileData := make([]byte, 512)
+		_, err = file.Read(fileData)
 		if err != nil {
 			return errors.BadRequestError(c, "Error parsing file")
 		}
-		if !(filetype.IsMIME(fileData, "application/pdf") || filetype.IsMIME(fileData, "application/epub+xml") || filetype.IsMIME(fileData, "image/png")) {
+		//Resets file pointer
+		file.Seek(0, 0)
+		contentType := http.DetectContentType(fileData)
+		if !(contentType == "application/pdf" || contentType == "application/epub+xml" || contentType == "image/png" || contentType == "image/jpeg") {
 			return errors.BadRequestError(c, "Invalid file type")
 		}
 		bucketClient, err := firebaseclient.GetBucket()
