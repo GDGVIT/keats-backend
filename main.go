@@ -30,7 +30,7 @@ func main() {
 		log.Panicln(fmt.Errorf("fatal error config file: %s", err))
 	}
 
-	app := fiber.New()
+	app := fiber.New(configs.FiberConfig())
 
 	// Use Middleware
 	app.Use(limiter.New(configs.LimiterConfig()))

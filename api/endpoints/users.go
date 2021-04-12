@@ -186,7 +186,7 @@ func uploadFile(c *fiber.Ctx) error {
 		//Close file when function ends
 		defer file.Close()
 		fileData := make([]byte, 512)
-		_, err = file.Read(fileData)
+		_, err = io.ReadAtLeast(file, fileData, 512)
 		if err != nil {
 			return errors.BadRequestError(c, "Error parsing file")
 		}
