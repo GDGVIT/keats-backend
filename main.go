@@ -3,6 +3,7 @@ package main
 //goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -36,6 +37,7 @@ func main() {
 	app.Use(limiter.New(configs.LimiterConfig()))
 	app.Use(logger.New(configs.LoggerConfig()))
 	app.Use(recover.New(configs.RecoverConfig()))
+	app.Use(cors.New(configs.CORSConfig()))
 
 	// Setting up jwt config
 	jwtconf := configs.JWTConfig()
@@ -51,7 +53,7 @@ func main() {
 	endpoints.MountUserRoutes(app, jwtware.New(jwtconf))
 	endpoints.MountClubRoutes(app, jwtware.New(jwtconf))
 
-	if err := app.Listen(":3000"); err != nil {
+	if err := app.Listen(":8000"); err != nil {
 		log.Panic(err)
 	}
 }
