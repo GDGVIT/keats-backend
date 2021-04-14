@@ -101,6 +101,34 @@ func updateUser(c *fiber.Ctx) error {
 	})
 }
 
+func updateUserProfilePic(c *fiber.Ctx) error {
+	u := new(schemas.UserUpdate)
+	r := new(struct {
+		ProfilePic string `json:"profile_pic"`
+	})
+	if err := c.BodyParser(r); err != nil {
+		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+	}
+
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
+	u.ID = string(uidBytes)
+	u.ProfilePic = r.ProfilePic
+	updated, err := crud.UpdateUser(u)
+	if err != nil {
+		return errors.InternalServerError(c, err.Error())
+	}
+
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data":   updated,
+	})
+
+}
+
 func updateUserPhoneNo(c *fiber.Ctx) error {
 	req := new(IDTokenRequest)
 	client, err := firebaseclient.GetClient()
@@ -234,6 +262,7 @@ func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	app.Post("/api/user", createUser)
 	authGroup := app.Group("/api/", middleware)
 	authGroup.Patch("user", updateUser)
+	authGroup.Post("user/updateprofilepic", updateUserProfilePic)
 	authGroup.Post("user/updatephone", updateUserPhoneNo)
 	authGroup.Get("user", getUser)
 	authGroup.Get("user/clubs", getUserClubsAndDetails)

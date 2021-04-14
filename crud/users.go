@@ -37,11 +37,12 @@ func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 		return nil, err
 	}
 	user := &models.User{
-		ID:       uid,
-		PhoneNo:  objIn.PhoneNo,
-		Username: objIn.Username,
-		Email:    objIn.Email,
-		Bio:      objIn.Bio,
+		ID:         uid,
+		PhoneNo:    objIn.PhoneNo,
+		ProfilePic: objIn.ProfilePic,
+		Username:   objIn.Username,
+		Email:      objIn.Email,
+		Bio:        objIn.Bio,
 	}
 
 	_, err = db.Model(user).Returning("*").WherePK().UpdateNotZero()
