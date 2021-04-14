@@ -3,8 +3,9 @@ package main
 //goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"log"
+
+	"github.com/gofiber/fiber/v2/middleware/cors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -13,7 +14,8 @@ import (
 	jwtware "github.com/gofiber/jwt/v2"
 	"github.com/spf13/viper"
 
-	"github.com/Krishap-s/keats-backend/api/endpoints"
+	"github.com/Krishap-s/keats-backend/api/endpoints/clubs"
+	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/pgdb"
 )
@@ -50,8 +52,8 @@ func main() {
 		log.Panic(err)
 	}
 
-	endpoints.MountUserRoutes(app, jwtware.New(jwtconf))
-	endpoints.MountClubRoutes(app, jwtware.New(jwtconf))
+	users.MountRoutes(app, jwtware.New(jwtconf))
+	clubs.MountRoutes(app, jwtware.New(jwtconf))
 
 	if err := app.Listen(":8000"); err != nil {
 		log.Panic(err)

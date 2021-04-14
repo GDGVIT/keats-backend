@@ -13,11 +13,9 @@ require (
 	github.com/gofiber/jwt/v2 v2.1.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.2.0
-	github.com/h2non/filetype v1.1.1
 	github.com/klauspost/compress v1.11.9 // indirect
 	github.com/spf13/viper v1.7.1
 	github.com/valyala/fasthttp v1.22.0 // indirect
-	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602 // indirect

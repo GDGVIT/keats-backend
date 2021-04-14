@@ -70,25 +70,6 @@ func GetUser(id string) (*models.User, error) {
 	return user, nil
 }
 
-// DeleteUser deletes an existing user or returns an error
-func DeleteUser(id string) (*models.User, error) {
-	db := pgdb.GetDB()
-	uid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, err
-	}
-	user := &models.User{
-		ID: uid,
-	}
-
-	_, err = db.Model(user).WherePK().Delete()
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
 // GetUserClub gets clubuser records from the database
 func GetUserClub(id string) ([]*schemas.Club, error) {
 	db := pgdb.GetDB()

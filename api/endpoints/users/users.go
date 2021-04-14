@@ -1,7 +1,12 @@
-package endpoints
+package users
 
 import (
 	"context"
+	"io"
+	"log"
+	"mime/multipart"
+	"net/http"
+
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/errors"
@@ -13,46 +18,65 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
-	"io"
-	"log"
-	"net/http"
 )
+
+// Non Handlers
+
+func GetUID(c *fiber.Ctx) (string, error) {
+	user := c.Locals("user").(*models.User)
+	uidBytes, err := user.ID.MarshalText()
+	if err != nil {
+		return "", errors.InternalServerError(c, "")
+	}
+	uid := string(uidBytes)
+	return uid, nil
+}
 
 type IDTokenRequest struct {
 	IDToken string `json:"id_token"`
+}
+
+func getPhoneNo(c *fiber.Ctx) (string, error) {
+	req := new(IDTokenRequest)
+	client, err := firebaseclient.GetClient()
+	if err != nil {
+		return "", errors.InternalServerError(c, "")
+	}
+	err = c.BodyParser(req)
+	if err != nil {
+		return "", errors.BadRequestError(c, "Missing or Malformed IDToken")
+	}
+	fireToken, err := client.VerifyIDToken(context.Background(), req.IDToken)
+	if err != nil {
+		return "", errors.UnauthorizedError(c, "IDToken Verification failed or IDToken expired")
+	}
+	phoneNumber, ok := fireToken.Claims["phone_number"].(string)
+	if !ok {
+		return "", errors.BadRequestError(c, "IDToken missing phone_number")
+	}
+	return phoneNumber, nil
 }
 
 func createJWT(user *models.User) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["id"] = user.ID
-	signedtoken, err := token.SignedString([]byte(configs.GetSecret()))
+	signedToken, err := token.SignedString([]byte(configs.GetSecret()))
 	if err != nil {
 		return "", err
 	}
-	return signedtoken, nil
+	return signedToken, nil
 }
 
+// Handlers
+
 func createUser(c *fiber.Ctx) error {
-	req := new(IDTokenRequest)
-	client, err := firebaseclient.GetClient()
+	phoneNumber, err := getPhoneNo(c)
 	if err != nil {
-		return errors.InternalServerError(c, "")
-	}
-	err = c.BodyParser(req)
-	if err != nil {
-		return errors.BadRequestError(c, "Missing or Malformed IDToken")
-	}
-	firetoken, err := client.VerifyIDToken(context.Background(), req.IDToken)
-	if err != nil {
-		return errors.UnauthorizedError(c, "IDToken Verification failed or IDToken expired")
-	}
-	phone_number, ok := firetoken.Claims["phone_number"].(string)
-	if !ok {
-		return errors.BadRequestError(c, "IDToken missing phone_number")
+		return err
 	}
 	u := &schemas.UserCreate{
-		PhoneNo: phone_number,
+		PhoneNo: phoneNumber,
 	}
 
 	created, err := crud.CreateUser(u)
@@ -60,7 +84,7 @@ func createUser(c *fiber.Ctx) error {
 		return errors.InternalServerError(c, "")
 	}
 
-	signedtoken, err := createJWT(created)
+	signedToken, err := createJWT(created)
 	if err != nil {
 		return errors.InternalServerError(c, "")
 	}
@@ -68,7 +92,7 @@ func createUser(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
-			"token":   signedtoken,
+			"token":   signedToken,
 			"user_id": created.ID,
 		},
 	})
@@ -76,23 +100,17 @@ func createUser(c *fiber.Ctx) error {
 
 func updateUser(c *fiber.Ctx) error {
 	u := new(schemas.UserUpdate)
-
 	if err := c.BodyParser(u); err != nil {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
-
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
+	uid, err := GetUID(c)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
-	u.ID = string(uidBytes)
-	u.ProfilePic = user.ProfilePic
-	u.PhoneNo = user.PhoneNo
-
+	u.ID = uid
 	updated, err := crud.UpdateUser(u)
 	if err != nil {
-		return errors.InternalServerError(c, err.Error())
+		return errors.InternalServerError(c, "")
 	}
 
 	return c.JSON(fiber.Map{
@@ -119,7 +137,7 @@ func updateUserProfilePic(c *fiber.Ctx) error {
 	u.ProfilePic = r.ProfilePic
 	updated, err := crud.UpdateUser(u)
 	if err != nil {
-		return errors.InternalServerError(c, err.Error())
+		return errors.InternalServerError(c, "")
 	}
 
 	return c.JSON(fiber.Map{
@@ -130,36 +148,21 @@ func updateUserProfilePic(c *fiber.Ctx) error {
 }
 
 func updateUserPhoneNo(c *fiber.Ctx) error {
-	req := new(IDTokenRequest)
-	client, err := firebaseclient.GetClient()
+	phoneNumber, err := getPhoneNo(c)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
-	err = c.BodyParser(req)
-	if err != nil {
-		return errors.BadRequestError(c, "Missing or Malformed IDToken")
-	}
-	firetoken, err := client.VerifyIDToken(context.Background(), req.IDToken)
-	if err != nil {
-		return errors.UnauthorizedError(c, "IDToken Verification failed or IDToken expired")
-	}
-	phone_number, ok := firetoken.Claims["phone_number"].(string)
-	if !ok {
-		return errors.BadRequestError(c, "IDToken missing phone_number")
-	}
-	user := c.Locals("user").(*models.User)
 	u := &schemas.UserUpdate{
-		PhoneNo: phone_number,
+		PhoneNo: phoneNumber,
 	}
-	uidBytes, err := user.ID.MarshalText()
+	u.ID, err = GetUID(c)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
-	u.ID = string(uidBytes)
 	_, err = crud.UpdateUser(u)
 	if err != nil {
-		pgerr := err.(pg.Error)
-		if pgerr.IntegrityViolation() {
+		pgErr := err.(pg.Error)
+		if pgErr.IntegrityViolation() {
 			return errors.ConflictError(c, "phone number already exists")
 		}
 		return errors.InternalServerError(c, "")
@@ -179,18 +182,16 @@ func getUser(c *fiber.Ctx) error {
 }
 
 func getUserClubsAndDetails(c *fiber.Ctx) error {
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
+	uid, err := GetUID(c)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
-	uid := string(uidBytes)
 	clubs, err := crud.GetUserClub(uid)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			return errors.NotFoundError(c, "No clubs found")
 		}
-		return errors.InternalServerError(c, err.Error())
+		return errors.InternalServerError(c, "")
 	}
 	return c.JSON(fiber.Map{
 		"status": "success",
@@ -202,24 +203,34 @@ func getUserClubsAndDetails(c *fiber.Ctx) error {
 
 }
 
+func closeFile(file multipart.File) {
+	err := file.Close()
+	if err != nil {
+		log.Println("error:", err.Error())
+	}
+}
+
 func uploadFile(c *fiber.Ctx) error {
 	if form, err := c.MultipartForm(); err == nil {
 		bucketName := viper.GetString("FIREBASE_BUCKET_NAME")
-		//Open form file header
+		// Open form file header
 		fileHeader := form.File["file"][0]
 		file, err := fileHeader.Open()
 		if err != nil {
 			return errors.BadRequestError(c, "Error parsing file")
 		}
-		//Close file when function ends
-		defer file.Close()
+		// Close file when function ends
+		defer closeFile(file)
 		fileData := make([]byte, 512)
 		_, err = io.ReadAtLeast(file, fileData, 512)
 		if err != nil {
 			return errors.BadRequestError(c, "Error parsing file")
 		}
-		//Resets file pointer
-		file.Seek(0, 0)
+		// Resets file pointer
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			return errors.InternalServerError(c, "")
+		}
 		contentType := http.DetectContentType(fileData)
 		if !(contentType == "application/pdf" || contentType == "application/epub+xml" || contentType == "image/png" || contentType == "image/jpeg") {
 			return errors.BadRequestError(c, "Invalid file type")
@@ -257,14 +268,14 @@ func uploadFile(c *fiber.Ctx) error {
 
 }
 
-// MountUserRoutes mounts all routes declared here
-func MountUserRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
+// MountRoutes mounts all routes declared here
+func MountRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	app.Post("/api/user", createUser)
-	authGroup := app.Group("/api/", middleware)
-	authGroup.Patch("user", updateUser)
-	authGroup.Post("user/updateprofilepic", updateUserProfilePic)
-	authGroup.Post("user/updatephone", updateUserPhoneNo)
-	authGroup.Get("user", getUser)
-	authGroup.Get("user/clubs", getUserClubsAndDetails)
+	authGroup := app.Group("/api/user", middleware)
+	authGroup.Patch("", updateUser)
+	authGroup.Post("updateprofilepic", updateUserProfilePic)
+	authGroup.Post("updatephone", updateUserPhoneNo)
+	authGroup.Get("", getUser)
+	authGroup.Get("clubs", getUserClubsAndDetails)
 	app.Post("/api/uploadfile", uploadFile, middleware)
 }

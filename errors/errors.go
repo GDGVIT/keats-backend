@@ -1,8 +1,9 @@
 package errors
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"log"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func TooManyRequestsError(c *fiber.Ctx) error {

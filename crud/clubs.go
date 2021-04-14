@@ -7,6 +7,22 @@ import (
 	"github.com/google/uuid"
 )
 
+func parseClubUser(clubID string, userID string) (*models.ClubUser, error) {
+	cid, err := uuid.Parse(clubID)
+	if err != nil {
+		return nil, err
+	}
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+	clubuser := &models.ClubUser{
+		ClubID: cid,
+		UserID: uid,
+	}
+	return clubuser, nil
+}
+
 // CreateUser creates a club in the database or returns an error
 func CreateClub(objIn *schemas.ClubCreate) (*models.Club, error) {
 	db := pgdb.GetDB()
@@ -65,11 +81,11 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 }
 
 // TogglePrivate toggles the private status of a club
-func TogglePrivate(ClubID string) error {
+func TogglePrivate(clubID string) error {
 	db := pgdb.GetDB()
 	_, err := db.Model((*models.Club)(nil)).
 		Set("private = NOT private").
-		Where("id = ?", ClubID).
+		Where("id = ?", clubID).
 		Update()
 	if err != nil {
 		return err
@@ -78,11 +94,11 @@ func TogglePrivate(ClubID string) error {
 }
 
 // ToggleSync toggles the page sync feature of a club
-func ToggleSync(ClubID string) error {
+func ToggleSync(clubID string) error {
 	db := pgdb.GetDB()
 	_, err := db.Model((*models.Club)(nil)).
 		Set("page_sync = NOT page_sync").
-		Where("id = ?", ClubID).
+		Where("id = ?", clubID).
 		Update()
 	if err != nil {
 		return err
@@ -91,7 +107,7 @@ func ToggleSync(ClubID string) error {
 }
 
 // ListClub gets all non-private clubs from database or returns an error
-func ListClub(UserId string) ([]*schemas.Club, error) {
+func ListClub(userID string) ([]*schemas.Club, error) {
 	db := pgdb.GetDB()
 	var clubs []*schemas.Club
 	err := db.Model((*models.Club)(nil)).
@@ -99,7 +115,7 @@ func ListClub(UserId string) ([]*schemas.Club, error) {
 		Join("INNER JOIN users as u").
 		JoinOn("club.host_id = u.id").
 		Where("private = false").
-		Where("NOT EXISTS (SELECT * FROM club_users cu WHERE cu.club_id = club.id AND cu.user_id = ?)", UserId).
+		Where("NOT EXISTS (SELECT * FROM club_users cu WHERE cu.club_id = club.id AND cu.user_id = ?)", userID).
 		Select(&clubs)
 	if err != nil {
 		return nil, err
@@ -131,19 +147,11 @@ func GetClub(id string) (*schemas.Club, error) {
 }
 
 // CreateClubUser creates a clubuser record in the database
-func CreateClubUser(ClubId string, UserId string) (*models.ClubUser, error) {
+func CreateClubUser(clubID string, userID string) (*models.ClubUser, error) {
 	db := pgdb.GetDB()
-	cid, err := uuid.Parse(ClubId)
+	clubuser, err := parseClubUser(clubID, userID)
 	if err != nil {
 		return nil, err
-	}
-	uid, err := uuid.Parse(UserId)
-	if err != nil {
-		return nil, err
-	}
-	clubuser := &models.ClubUser{
-		ClubID: cid,
-		UserID: uid,
 	}
 	_, err = db.Model(clubuser).Returning("*").Insert()
 	if err != nil {
@@ -153,9 +161,9 @@ func CreateClubUser(ClubId string, UserId string) (*models.ClubUser, error) {
 }
 
 // GetClubUser get clubuser records from database
-func GetClubUser(ClubId string) ([]*models.User, error) {
+func GetClubUser(clubID string) ([]*models.User, error) {
 	db := pgdb.GetDB()
-	cid, err := uuid.Parse(ClubId)
+	cid, err := uuid.Parse(clubID)
 	if err != nil {
 		return nil, err
 	}
@@ -172,20 +180,14 @@ func GetClubUser(ClubId string) ([]*models.User, error) {
 }
 
 // DeleteClubUser deletes clubuser record from database
-func DeleteClubUser(ClubId string, UserId string) (*models.ClubUser, error) {
+func DeleteClubUser(clubID string, userID string) (*models.ClubUser, error) {
 	db := pgdb.GetDB()
-	cid, err := uuid.Parse(ClubId)
+	clubuser, err := parseClubUser(clubID, userID)
 	if err != nil {
 		return nil, err
 	}
-	uid, err := uuid.Parse(UserId)
-	if err != nil {
-		return nil, err
-	}
-	clubuser := &models.ClubUser{
-		ClubID: cid,
-		UserID: uid,
-	}
+	cid := clubuser.ClubID
+	uid := clubuser.UserID
 	_, err = db.Model(clubuser).Where("user_id = ?user_id and club_id = ?club_id").Delete()
 	if err != nil {
 		return nil, err

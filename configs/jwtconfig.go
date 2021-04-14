@@ -28,9 +28,8 @@ func JWTConfig() jwtware.Config {
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			if err.Error() == "Missing or malformed JWT" {
 				return errors.BadRequestError(c, "Missing or malformed JWT")
-			} else {
-				return errors.UnauthorizedError(c, "Invalid JWT")
 			}
+			return errors.UnauthorizedError(c, "Invalid JWT")
 		},
 		SuccessHandler: func(c *fiber.Ctx) error {
 			token := c.Locals("user").(*jwt.Token)
@@ -40,9 +39,8 @@ func JWTConfig() jwtware.Config {
 			if err != nil {
 				if err == pg.ErrNoRows {
 					return errors.UnauthorizedError(c, "Invalid JWT")
-				} else {
-					return errors.InternalServerError(c, "")
 				}
+				return errors.InternalServerError(c, "")
 			}
 			c.Locals("user", user)
 			return c.Next()

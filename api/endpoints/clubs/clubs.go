@@ -1,6 +1,7 @@
-package endpoints
+package clubs
 
 import (
+	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/errors"
 	"github.com/Krishap-s/keats-backend/models"
@@ -9,36 +10,72 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Non Handlers
+
 type clubRequests struct {
-	ClubID string `json:"club_id"`
+	ID string `json:"club_id"`
 }
 
-func checkIfHost(UserId string, ClubId string) (bool, error) {
-	club, err := crud.GetClub(ClubId)
+func parseClubIDRequest(c *fiber.Ctx) (*clubRequests, error) {
+	r := new(clubRequests)
+	if err := c.BodyParser(r); err != nil || r.ID == "" {
+		return nil, errors.BadRequestError(c, "JSON in the incorrect format")
+	}
+	return r, nil
+}
+
+func checkIfHost(userID string, clubID string) (bool, error) {
+	club, err := crud.GetClub(clubID)
 	if err != nil {
 		return false, err
 	}
-	if UserId != club.HostID {
+	if userID != club.HostID {
 		return false, nil
 	}
 	return true, nil
 }
 
+func prepUpdate(c *fiber.Ctx, userID string) error {
+	uid, err := users.GetUID(c)
+	if err != nil {
+		return err
+	}
+	check, err := checkIfHost(uid, userID)
+	if err != nil {
+		return errors.NotFoundError(c, "Club not found")
+	}
+	if !check {
+		return errors.UnauthorizedError(c, "You are not the host of this group")
+	}
+	return nil
+}
+
+func prepToggle(c *fiber.Ctx) (*clubRequests, error) {
+	r, err := parseClubIDRequest(c)
+	if err != nil || r == nil {
+		return nil, err
+	}
+	if err = prepUpdate(c, r.ID); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+// Handlers
+
 func createClub(c *fiber.Ctx) error {
-	club := new(schemas.ClubCreate)
-	if err := c.BodyParser(club); err != nil {
+	r := new(schemas.ClubCreate)
+	if err := c.BodyParser(r); err != nil {
 		return errors.UnprocessableEntityError(c, "form data in the incorrect format")
 	}
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
+	uid, err := users.GetUID(c)
+	if err != nil {
+		return err
+	}
+	r.HostID = uid
+	created, err := crud.CreateClub(r)
 	if err != nil {
 		return errors.InternalServerError(c, "")
-
-	}
-	club.HostID = string(uidBytes)
-	created, err := crud.CreateClub(club)
-	if err != nil {
-		return errors.InternalServerError(c, err.Error())
 	}
 	return c.JSON(fiber.Map{
 		"status": "success",
@@ -47,25 +84,28 @@ func createClub(c *fiber.Ctx) error {
 }
 
 func joinClub(c *fiber.Ctx) error {
-	r := new(clubRequests)
-	if err := c.BodyParser(r); err != nil || r.ClubID == "" {
-		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+	r, err := parseClubIDRequest(c)
+	if err != nil {
+		return err
 	}
-	clubId := r.ClubID
-	club, err := crud.GetClub(clubId)
+	clubID := r.ID
+	club, err := crud.GetClub(clubID)
 	if err != nil {
 		return errors.NotFoundError(c, "Club not found")
 	}
-	users, err := crud.GetClubUser(clubId)
+	usersList, err := crud.GetClubUser(clubID)
+	if err != nil {
+		return errors.InternalServerError(c, "")
+	}
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
 		return errors.InternalServerError(c, "")
 	}
-	_, err = crud.CreateClubUser(clubId, string(uidBytes))
+	_, err = crud.CreateClubUser(clubID, string(uidBytes))
 	if err != nil {
-		pgerr := err.(pg.Error)
-		if pgerr.IntegrityViolation() {
+		pgErr := err.(pg.Error)
+		if pgErr.IntegrityViolation() {
 			return errors.ConflictError(c, "You are already a member of this club")
 		}
 		return errors.InternalServerError(c, "")
@@ -75,7 +115,7 @@ func joinClub(c *fiber.Ctx) error {
 		"status": "success",
 		"data": fiber.Map{
 			"club":     club,
-			"users":    users,
+			"users":    usersList,
 			"comments": "{}",
 			"chat":     "{}",
 		},
@@ -84,12 +124,10 @@ func joinClub(c *fiber.Ctx) error {
 }
 
 func listClubs(c *fiber.Ctx) error {
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
+	uid, err := users.GetUID(c)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
-	uid := string(uidBytes)
 	clubs, err := crud.ListClub(uid)
 	if err != nil {
 		return errors.InternalServerError(c, "")
@@ -104,11 +142,12 @@ func listClubs(c *fiber.Ctx) error {
 }
 
 func getClub(c *fiber.Ctx) error {
-	clubId := c.Query("club_id")
-	users, err := crud.GetClubUser(clubId)
+	clubID := c.Query("club_id")
+	usersList, err := crud.GetClubUser(clubID)
 	user := c.Locals("user").(*models.User)
+
 	var isMember = false
-	for _, clubUser := range users {
+	for _, clubUser := range usersList {
 		if clubUser.ID == user.ID {
 			isMember = true
 			break
@@ -118,17 +157,17 @@ func getClub(c *fiber.Ctx) error {
 		return errors.UnauthorizedError(c, "You are not a member of this club")
 	}
 	if err != nil {
-		return errors.InternalServerError(c, err.Error())
+		return errors.InternalServerError(c, "")
 	}
-	club, err := crud.GetClub(clubId)
+	club, err := crud.GetClub(clubID)
 	if err != nil {
-		return errors.InternalServerError(c, err.Error())
+		return errors.InternalServerError(c, "")
 	}
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
 			"club":     club,
-			"users":    users,
+			"users":    usersList,
 			"comments": "{}",
 			"chat":     "{}",
 		},
@@ -140,18 +179,8 @@ func updateClub(c *fiber.Ctx) error {
 	if err := c.BodyParser(r); err != nil || r.ID == "" {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
-	if err != nil {
-		return errors.InternalServerError(c, "")
-	}
-	uid := string(uidBytes)
-	check, err := checkIfHost(uid, r.ID)
-	if err != nil {
-		return errors.NotFoundError(c, "Club not found")
-	}
-	if !check {
-		return errors.UnauthorizedError(c, "You are not the host of this group")
+	if err := prepUpdate(c, r.ID); err != nil {
+		return err
 	}
 	updated, err := crud.UpdateClub(r)
 	if err != nil {
@@ -164,29 +193,12 @@ func updateClub(c *fiber.Ctx) error {
 }
 
 func togglePrivate(c *fiber.Ctx) error {
-	r := new(struct {
-		ID string `json:"id"`
-	})
-	if err := c.BodyParser(r); err != nil {
-		return errors.BadRequestError(c, "JSON in the incorrect format")
+	r, err := prepToggle(c)
+	if err != nil || r == nil {
+		return err
 	}
-
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
-	if err != nil {
+	if err := crud.TogglePrivate(r.ID); err != nil {
 		return errors.InternalServerError(c, "")
-	}
-	uid := string(uidBytes)
-	check, err := checkIfHost(uid, r.ID)
-	if err != nil {
-		return errors.NotFoundError(c, "Club not found")
-	}
-	if !check {
-		return errors.UnauthorizedError(c, "You are not the host of this group")
-	}
-	err = crud.TogglePrivate(r.ID)
-	if err != nil {
-		return errors.InternalServerError(c, err.Error())
 	}
 	return c.JSON(fiber.Map{
 		"status":  "success",
@@ -195,28 +207,11 @@ func togglePrivate(c *fiber.Ctx) error {
 }
 
 func toggleSync(c *fiber.Ctx) error {
-	r := new(struct {
-		ID string `json:"id"`
-	})
-	if err := c.BodyParser(r); err != nil {
-		return errors.BadRequestError(c, "JSON in the incorrect format")
+	r, err := prepToggle(c)
+	if err != nil || r == nil {
+		return err
 	}
-
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
-	if err != nil {
-		return errors.InternalServerError(c, "")
-	}
-	uid := string(uidBytes)
-	check, err := checkIfHost(uid, r.ID)
-	if err != nil {
-		return errors.NotFoundError(c, "Club not found")
-	}
-	if !check {
-		return errors.UnauthorizedError(c, "You are not the host of this group")
-	}
-	err = crud.ToggleSync(r.ID)
-	if err != nil {
+	if err := crud.ToggleSync(r.ID); err != nil {
 		return errors.InternalServerError(c, "")
 	}
 	return c.JSON(fiber.Map{
@@ -233,24 +228,25 @@ func kickUser(c *fiber.Ctx) error {
 	if err := c.BodyParser(r); err != nil || r.UserID == "" || r.ClubID == "" {
 		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
 	}
-	clubId := r.ClubID
-	deviantId := r.UserID
-	club, err := crud.GetClub(clubId)
+	clubID := r.ClubID
+	deviantID := r.UserID
+	club, err := crud.GetClub(clubID)
 	if err != nil {
 		return errors.NotFoundError(c, "Club not found")
 	}
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
+	uid, err := users.GetUID(c)
+	if err != nil {
+		return err
+	}
+	if uid != club.HostID {
+		return errors.UnauthorizedError(c, "You are not the host of this group")
+	} else if uid == deviantID {
+		return errors.ConflictError(c, "You cannot kick yourself out of the club")
+	}
+	_, err = crud.DeleteClubUser(clubID, r.UserID)
 	if err != nil {
 		return errors.InternalServerError(c, "")
 	}
-	uid := string(uidBytes)
-	if uid != club.HostID {
-		return errors.UnauthorizedError(c, "You are not the host of this group")
-	} else if uid == deviantId {
-		return errors.ConflictError(c, "You cannot kick yourself out of the club")
-	}
-	_, err = crud.DeleteClubUser(clubId, r.UserID)
 	return c.JSON(fiber.Map{
 		"status":  "success",
 		"message": "User has been kicked from the club",
@@ -258,22 +254,21 @@ func kickUser(c *fiber.Ctx) error {
 }
 
 func leaveClub(c *fiber.Ctx) error {
-	r := new(clubRequests)
-	if err := c.BodyParser(r); err != nil || r.ClubID == "" {
-		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+	r, err := parseClubIDRequest(c)
+	if err != nil {
+		return err
 	}
-	clubId := r.ClubID
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
+	clubID := r.ID
+	uid, err := users.GetUID(c)
 	if err != nil {
 		return errors.InternalServerError(c, "")
 	}
-	_, err = crud.DeleteClubUser(clubId, string(uidBytes))
+	_, err = crud.DeleteClubUser(clubID, uid)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			return errors.ConflictError(c, "You are not a member of this club")
 		}
-		return errors.InternalServerError(c, err.Error())
+		return errors.InternalServerError(c, "")
 	}
 	return c.JSON(fiber.Map{
 		"status":  "success",
@@ -281,7 +276,7 @@ func leaveClub(c *fiber.Ctx) error {
 	})
 }
 
-func MountClubRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
+func MountRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	authGroup := app.Group("/api/clubs", middleware)
 	authGroup.Get("", getClub)
 	authGroup.Get("list", listClubs)
