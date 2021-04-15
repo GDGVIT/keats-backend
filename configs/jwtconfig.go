@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/Krishap-s/keats-backend/crud"
-	"github.com/Krishap-s/keats-backend/errors"
 )
 
 func GetSecret() string {
@@ -27,9 +26,9 @@ func JWTConfig() jwtware.Config {
 	return jwtware.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			if err.Error() == "Missing or malformed JWT" {
-				return errors.BadRequestError(c, "Missing or malformed JWT")
+				return fmt.Errorf("malformed jwt")
 			}
-			return errors.UnauthorizedError(c, "Invalid JWT")
+			return fmt.Errorf("invalid jwt")
 		},
 		SuccessHandler: func(c *fiber.Ctx) error {
 			token := c.Locals("user").(*jwt.Token)
@@ -38,9 +37,9 @@ func JWTConfig() jwtware.Config {
 			user, err := crud.GetUser(id)
 			if err != nil {
 				if err == pg.ErrNoRows {
-					return errors.UnauthorizedError(c, "Invalid JWT")
+					return fmt.Errorf("invalid jwt")
 				}
-				return errors.InternalServerError(c, "")
+				return err
 			}
 			c.Locals("user", user)
 			return c.Next()

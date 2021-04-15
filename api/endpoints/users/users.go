@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/crud"
-	"github.com/Krishap-s/keats-backend/errors"
 	"github.com/Krishap-s/keats-backend/firebaseclient"
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/schemas"
@@ -26,7 +26,7 @@ func GetUID(c *fiber.Ctx) (string, error) {
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
-		return "", errors.InternalServerError(c, "")
+		return "", err
 	}
 	uid := string(uidBytes)
 	return uid, nil
@@ -40,19 +40,19 @@ func getPhoneNo(c *fiber.Ctx) (string, error) {
 	req := new(IDTokenRequest)
 	client, err := firebaseclient.GetClient()
 	if err != nil {
-		return "", errors.InternalServerError(c, "")
+		return "", err
 	}
 	err = c.BodyParser(req)
 	if err != nil {
-		return "", errors.BadRequestError(c, "Missing or Malformed IDToken")
+		return "", fmt.Errorf("malformed IDToken")
 	}
 	fireToken, err := client.VerifyIDToken(context.Background(), req.IDToken)
 	if err != nil {
-		return "", errors.UnauthorizedError(c, "IDToken Verification failed or IDToken expired")
+		return "", fmt.Errorf("IDToken verification failed")
 	}
 	phoneNumber, ok := fireToken.Claims["phone_number"].(string)
 	if !ok {
-		return "", errors.BadRequestError(c, "IDToken missing phone_number")
+		return "", fmt.Errorf("no phoneNo")
 	}
 	return phoneNumber, nil
 }
@@ -81,12 +81,12 @@ func createUser(c *fiber.Ctx) error {
 
 	created, err := crud.CreateUser(u)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
 
 	signedToken, err := createJWT(created)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
 
 	return c.JSON(fiber.Map{
@@ -101,7 +101,7 @@ func createUser(c *fiber.Ctx) error {
 func updateUser(c *fiber.Ctx) error {
 	u := new(schemas.UserUpdate)
 	if err := c.BodyParser(u); err != nil {
-		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+		return fmt.Errorf("JSON Data Incorrect")
 	}
 	uid, err := GetUID(c)
 	if err != nil {
@@ -110,7 +110,7 @@ func updateUser(c *fiber.Ctx) error {
 	u.ID = uid
 	updated, err := crud.UpdateUser(u)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
 
 	return c.JSON(fiber.Map{
@@ -125,19 +125,19 @@ func updateUserProfilePic(c *fiber.Ctx) error {
 		ProfilePic string `json:"profile_pic"`
 	})
 	if err := c.BodyParser(r); err != nil {
-		return errors.UnprocessableEntityError(c, "JSON in the incorrect format")
+		return fmt.Errorf("JSON Data Incorrect")
 	}
 
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
 	u.ID = string(uidBytes)
 	u.ProfilePic = r.ProfilePic
 	updated, err := crud.UpdateUser(u)
 	if err != nil {
-		return errors.InternalServerError(c, "")
+		return err
 	}
 
 	return c.JSON(fiber.Map{
@@ -163,9 +163,9 @@ func updateUserPhoneNo(c *fiber.Ctx) error {
 	if err != nil {
 		pgErr := err.(pg.Error)
 		if pgErr.IntegrityViolation() {
-			return errors.ConflictError(c, "phone number already exists")
+			return fmt.Errorf("no phoneNo")
 		}
-		return errors.InternalServerError(c, "")
+		return err
 	}
 	return c.JSON(fiber.Map{
 		"status":  "success",
@@ -189,9 +189,9 @@ func getUserClubsAndDetails(c *fiber.Ctx) error {
 	clubs, err := crud.GetUserClub(uid)
 	if err != nil {
 		if err == pg.ErrNoRows {
-			return errors.NotFoundError(c, "No clubs found")
+			return fmt.Errorf("club not found")
 		}
-		return errors.InternalServerError(c, "")
+		return err
 	}
 	return c.JSON(fiber.Map{
 		"status": "success",
@@ -217,44 +217,41 @@ func uploadFile(c *fiber.Ctx) error {
 		fileHeader := form.File["file"][0]
 		file, err := fileHeader.Open()
 		if err != nil {
-			return errors.BadRequestError(c, "Error parsing file")
+			return fmt.Errorf("file parse error")
 		}
 		// Close file when function ends
 		defer closeFile(file)
 		fileData := make([]byte, 512)
 		_, err = io.ReadAtLeast(file, fileData, 512)
 		if err != nil {
-			return errors.BadRequestError(c, "Error parsing file")
+			return fmt.Errorf("file parse error")
 		}
 		// Resets file pointer
 		_, err = file.Seek(0, 0)
 		if err != nil {
-			return errors.InternalServerError(c, "")
+			return err
 		}
 		contentType := http.DetectContentType(fileData)
 		if !(contentType == "application/pdf" || contentType == "application/epub+xml" || contentType == "image/png" || contentType == "image/jpeg") {
-			return errors.BadRequestError(c, "Invalid file type")
+			return fmt.Errorf("invalid file type")
 		}
 		bucketClient, err := firebaseclient.GetBucket()
 		if err != nil {
 			log.Println(err.Error())
-			return errors.InternalServerError(c, "")
+			return err
 		}
 		bucket, err := bucketClient.Bucket(bucketName)
 		if err != nil {
-			log.Println(err.Error())
-			return errors.InternalServerError(c, "")
+			return err
 		}
 		fid := uuid.NewString()
 		filePath := "public/" + fid
 		wc := bucket.Object(filePath).NewWriter(context.Background())
 		if _, err = io.Copy(wc, file); err != nil {
-			log.Println(err.Error())
-			return errors.InternalServerError(c, "")
+			return err
 		}
 		if err = wc.Close(); err != nil {
-			log.Println(err.Error())
-			return errors.InternalServerError(c, "")
+			return err
 		}
 
 		fileURL := "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/public%2f" + fid + "?alt=media"
@@ -264,7 +261,7 @@ func uploadFile(c *fiber.Ctx) error {
 		})
 	}
 
-	return errors.BadRequestError(c, "Error finding or parsing file")
+	return fmt.Errorf("file parse error")
 
 }
 
