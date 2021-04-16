@@ -2,10 +2,13 @@ package clubs
 
 import (
 	"fmt"
+
 	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/crud"
+	"github.com/Krishap-s/keats-backend/firebaseclient"
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/schemas"
+	"github.com/Krishap-s/keats-backend/utils"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
 )
@@ -50,6 +53,45 @@ func prepUpdate(c *fiber.Ctx, userID string) error {
 	return nil
 }
 
+func updateClubFiles(c *fiber.Ctx) (string, string, error) {
+	clubPicFileHeader, err := c.FormFile("club_pic")
+	if clubPicFileHeader == nil {
+		return "", "", nil
+	}
+	if err != nil {
+		return "", "", fmt.Errorf("form Data Incorrect")
+	}
+	clubPicFile, err := clubPicFileHeader.Open()
+	if err != nil {
+		return "", "", fmt.Errorf("file parse error")
+	}
+	defer utils.CloseFile(clubPicFile)
+	acceptedTypes := []string{"image/png", "image/jpeg"}
+	clubPicURL, err := firebaseclient.WriteObject(&clubPicFile, acceptedTypes)
+	if err != nil {
+		return "", "", err
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if fileHeader == nil {
+		return "", "", nil
+	}
+	if err != nil {
+		return "", "", fmt.Errorf("form Data Incorrect")
+	}
+	fileFile, err := fileHeader.Open()
+	if err != nil {
+		return "", "", fmt.Errorf("file parse error")
+	}
+	defer utils.CloseFile(fileFile)
+	acceptedTypes = []string{"application/pdf", "application/epub+xml"}
+	fileURL, err := firebaseclient.WriteObject(&fileFile, acceptedTypes)
+	if err != nil {
+		return "", "", err
+	}
+	return clubPicURL, fileURL, nil
+}
+
 func prepToggle(c *fiber.Ctx) (*clubRequests, error) {
 	r, err := parseClubIDRequest(c)
 	if err != nil || r == nil {
@@ -73,6 +115,10 @@ func createClub(c *fiber.Ctx) error {
 		return err
 	}
 	r.HostID = uid
+	r.ClubPic, r.FileURL, err = updateClubFiles(c)
+	if err != nil {
+		return err
+	}
 	created, err := crud.CreateClub(r)
 	if err != nil {
 		return err
@@ -180,6 +226,11 @@ func updateClub(c *fiber.Ctx) error {
 		return fmt.Errorf("JSON Data Incorrect")
 	}
 	if err := prepUpdate(c, r.ID); err != nil {
+		return err
+	}
+	var err error
+	r.ClubPic, r.FileURL, err = updateClubFiles(c)
+	if err != nil {
 		return err
 	}
 	updated, err := crud.UpdateClub(r)

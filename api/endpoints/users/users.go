@@ -3,21 +3,17 @@ package users
 import (
 	"context"
 	"fmt"
-	"io"
-	"log"
 	"mime/multipart"
-	"net/http"
 
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/firebaseclient"
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/schemas"
+	"github.com/Krishap-s/keats-backend/utils"
 	jwt "github.com/form3tech-oss/jwt-go"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	"github.com/spf13/viper"
 )
 
 // Non Handlers
@@ -99,52 +95,40 @@ func createUser(c *fiber.Ctx) error {
 }
 
 func updateUser(c *fiber.Ctx) error {
-	u := new(schemas.UserUpdate)
-	if err := c.BodyParser(u); err != nil {
+	r := new(schemas.UserUpdate)
+	if err := c.BodyParser(r); err != nil {
 		return fmt.Errorf("JSON Data Incorrect")
 	}
 	uid, err := GetUID(c)
 	if err != nil {
 		return err
 	}
-	u.ID = uid
-	updated, err := crud.UpdateUser(u)
+	r.ID = uid
+	fileHeader, err := c.FormFile("profile_pic")
+	if fileHeader != nil {
+		if err != nil {
+			return fmt.Errorf("form Data Incorrect")
+		}
+		var file multipart.File
+		file, err = fileHeader.Open()
+		defer utils.CloseFile(file)
+		if err != nil {
+			return fmt.Errorf("file parse error")
+		}
+		acceptedTypes := []string{"image/png", "image/jpeg"}
+		r.ProfilePic, err = firebaseclient.WriteObject(&file, acceptedTypes)
+		if err != nil {
+			return err
+		}
+	}
+	updated, err := crud.UpdateUser(r)
 	if err != nil {
 		return err
 	}
-
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data":   updated,
 	})
-}
-
-func updateUserProfilePic(c *fiber.Ctx) error {
-	u := new(schemas.UserUpdate)
-	r := new(struct {
-		ProfilePic string `json:"profile_pic"`
-	})
-	if err := c.BodyParser(r); err != nil {
-		return fmt.Errorf("JSON Data Incorrect")
-	}
-
-	user := c.Locals("user").(*models.User)
-	uidBytes, err := user.ID.MarshalText()
-	if err != nil {
-		return err
-	}
-	u.ID = string(uidBytes)
-	u.ProfilePic = r.ProfilePic
-	updated, err := crud.UpdateUser(u)
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(fiber.Map{
-		"status": "success",
-		"data":   updated,
-	})
-
 }
 
 func updateUserPhoneNo(c *fiber.Ctx) error {
@@ -203,76 +187,12 @@ func getUserClubsAndDetails(c *fiber.Ctx) error {
 
 }
 
-func closeFile(file multipart.File) {
-	err := file.Close()
-	if err != nil {
-		log.Println("error:", err.Error())
-	}
-}
-
-func uploadFile(c *fiber.Ctx) error {
-	if form, err := c.MultipartForm(); err == nil {
-		bucketName := viper.GetString("FIREBASE_BUCKET_NAME")
-		// Open form file header
-		fileHeader := form.File["file"][0]
-		file, err := fileHeader.Open()
-		if err != nil {
-			return fmt.Errorf("file parse error")
-		}
-		// Close file when function ends
-		defer closeFile(file)
-		fileData := make([]byte, 512)
-		_, err = io.ReadAtLeast(file, fileData, 512)
-		if err != nil {
-			return fmt.Errorf("file parse error")
-		}
-		// Resets file pointer
-		_, err = file.Seek(0, 0)
-		if err != nil {
-			return err
-		}
-		contentType := http.DetectContentType(fileData)
-		if !(contentType == "application/pdf" || contentType == "application/epub+xml" || contentType == "image/png" || contentType == "image/jpeg") {
-			return fmt.Errorf("invalid file type")
-		}
-		bucketClient, err := firebaseclient.GetBucket()
-		if err != nil {
-			log.Println(err.Error())
-			return err
-		}
-		bucket, err := bucketClient.Bucket(bucketName)
-		if err != nil {
-			return err
-		}
-		fid := uuid.NewString()
-		filePath := "public/" + fid
-		wc := bucket.Object(filePath).NewWriter(context.Background())
-		if _, err = io.Copy(wc, file); err != nil {
-			return err
-		}
-		if err = wc.Close(); err != nil {
-			return err
-		}
-
-		fileURL := "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/public%2f" + fid + "?alt=media"
-		return c.JSON(fiber.Map{
-			"status": "success",
-			"data":   fileURL,
-		})
-	}
-
-	return fmt.Errorf("file parse error")
-
-}
-
 // MountRoutes mounts all routes declared here
 func MountRoutes(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 	app.Post("/api/user", createUser)
 	authGroup := app.Group("/api/user", middleware)
 	authGroup.Patch("", updateUser)
-	authGroup.Post("updateprofilepic", updateUserProfilePic)
 	authGroup.Post("updatephone", updateUserPhoneNo)
 	authGroup.Get("", getUser)
 	authGroup.Get("clubs", getUserClubsAndDetails)
-	app.Post("/api/uploadfile", uploadFile, middleware)
 }
