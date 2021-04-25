@@ -143,6 +143,12 @@ func joinClub(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	for i, clubUser := range usersList {
+		if clubUser.ID.String() == club.HostID {
+			usersList[0] , usersList[i] = usersList[i] , usersList[0]
+			break
+		}
+	}
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
@@ -200,7 +206,7 @@ func getClub(c *fiber.Ctx) error {
 		}
 	}
 	if !isMember {
-		return fmt.Errorf("not host")
+		return fmt.Errorf("not member")
 	}
 	if err != nil {
 		return err
@@ -208,6 +214,12 @@ func getClub(c *fiber.Ctx) error {
 	club, err := crud.GetClub(clubID)
 	if err != nil {
 		return err
+	}
+	for i, clubUser := range usersList {
+		if clubUser.ID.String() == club.HostID {
+			usersList[0], usersList[i] = usersList[i], usersList[0]
+			break
+		}
 	}
 	return c.JSON(fiber.Map{
 		"status": "success",
