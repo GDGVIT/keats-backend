@@ -3,6 +3,7 @@ package configs
 //goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
+	"github.com/gofiber/websocket/v2"
 	"log"
 
 	jwt "github.com/form3tech-oss/jwt-go"
@@ -24,10 +25,17 @@ func GetSecret() string {
 
 func JWTConfig() jwtware.Config {
 	return jwtware.Config{
+		Filter: func(c *fiber.Ctx) bool {
+			if websocket.IsWebSocketUpgrade(c) {
+				return true
+			}
+			return false
+		},
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			if err.Error() == "Missing or malformed JWT" {
 				return fmt.Errorf("malformed jwt")
 			}
+
 			return fmt.Errorf("invalid jwt")
 		},
 		SuccessHandler: func(c *fiber.Ctx) error {

@@ -3,6 +3,7 @@ package main
 //goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
+	"github.com/Krishap-s/keats-backend/api/sockets"
 	"log"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -54,8 +55,9 @@ func main() {
 
 	users.MountRoutes(app, jwtware.New(jwtconf))
 	clubs.MountRoutes(app, jwtware.New(jwtconf))
+	sockets.MountWebsockets(app, jwtware.New(jwtconf))
 
-	if err := app.Listen(":8000"); err != nil {
+	if err := app.Listen("0.0.0.0:" + viper.GetString("PORT")); err != nil {
 		log.Panic(err)
 	}
 }
