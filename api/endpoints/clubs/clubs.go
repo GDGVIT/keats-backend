@@ -160,6 +160,10 @@ func joinClub(c *fiber.Ctx) error {
 		}
 		return err
 	}
+	chatMessages, err := crud.GetChatMessage(clubID)
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(fiber.Map{
 		"status": "success",
@@ -167,7 +171,7 @@ func joinClub(c *fiber.Ctx) error {
 			"club":     club,
 			"users":    usersList,
 			"comments": "{}",
-			"chat":     "{}",
+			"chat":     chatMessages,
 		},
 		"message": "Club joined successfully",
 	})
@@ -220,13 +224,17 @@ func getClub(c *fiber.Ctx) error {
 			break
 		}
 	}
+	chatMessages, err := crud.GetChatMessage(clubID)
+	if err != nil {
+		return err
+	}
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
 			"club":     club,
 			"users":    usersList,
 			"comments": "{}",
-			"chat":     "{}",
+			"chat":     chatMessages,
 		},
 	})
 }
