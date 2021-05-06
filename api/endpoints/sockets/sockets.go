@@ -27,7 +27,7 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 		_, err := crud.GetClub(clubID)
 		if err != nil {
 			_ = conn.WriteJSON(fiber.Map{
-				"status":  "error",
+				"action":  "error",
 				"message": "Club not found",
 			})
 			return
@@ -46,13 +46,13 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 		if err != nil {
 			if err.Error() == "Missing or malformed JWT" {
 				_ = conn.WriteJSON(fiber.Map{
-					"status":  "error",
+					"action":  "error",
 					"message": "Missing or malformed JWT",
 				})
 				return
 			}
 			_ = conn.WriteJSON(fiber.Map{
-				"status":  "error",
+				"action":  "error",
 				"message": "Invalid or Expired JWT",
 			})
 			return
@@ -62,7 +62,7 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 		userID, err := uuid.Parse(uid)
 		if err != nil {
 			_ = conn.WriteJSON(fiber.Map{
-				"status":  "error",
+				"action":  "error",
 				"message": "Invalid or Expired JWT",
 			})
 			return
@@ -76,7 +76,7 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 		}
 		if !isMember {
 			_ = conn.WriteJSON(fiber.Map{
-				"status":  "error",
+				"action":  "error",
 				"message": "You are not a member of this club",
 			})
 			return

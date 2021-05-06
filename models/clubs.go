@@ -31,7 +31,7 @@ func (c *Club) AfterUpdate(ctx context.Context) error {
 	}
 	clubID := c.ID.String()
 	byteData, _ := json.Marshal(fiber.Map{
-		"action": "Club Update",
+		"action": "club_update",
 		"data":   c,
 	})
 	rdb.Publish(ctx, clubID, byteData)

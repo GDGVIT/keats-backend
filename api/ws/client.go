@@ -106,10 +106,9 @@ func (c *Client) readPump(rdb *redis.Client) {
 				continue
 			}
 			publishMessage = &fiber.Map{
-				"user_id":        c.UserID,
-				"action":         "chatmessage",
-				"chatmessage_id": createdchatmessage.ID,
-				"message":        text,
+				"user_id": c.UserID,
+				"action":  "chatmessage",
+				"data":    createdchatmessage,
 			}
 		case "like_chatmessage":
 			id, ok := jsonMessage["data"].(string)

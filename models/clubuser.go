@@ -26,7 +26,7 @@ func (c *ClubUser) AfterInsert(ctx context.Context) error {
 	userID := c.UserID.String()
 	clubID := c.ClubID.String()
 	byteData, _ := json.Marshal(fiber.Map{
-		"action": "User Join",
+		"action": "user_join",
 		"data":   userID,
 	})
 	rdb.Publish(ctx, clubID, byteData)
@@ -44,7 +44,7 @@ func (c *ClubUser) AfterDelete(ctx context.Context) error {
 	userID := c.UserID.String()
 	clubID := c.ClubID.String()
 	byteData, _ := json.Marshal(fiber.Map{
-		"action": "User Leave",
+		"action": "user_leave",
 		"data":   userID,
 	})
 	rdb.Publish(ctx, clubID, byteData)
