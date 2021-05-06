@@ -58,7 +58,8 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 			return
 		}
 		claims := token.Claims.(jwt.MapClaims)
-		userID, err := uuid.Parse(claims["id"].(string))
+		uid := claims["id"].(string)
+		userID, err := uuid.Parse(uid)
 		if err != nil {
 			conn.WriteJSON(fiber.Map{
 				"status":  "error",
@@ -80,6 +81,6 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 			})
 			return
 		}
-		ws.ServeWs(conn, clubID)
+		ws.ServeWs(conn, uid, clubID)
 	}))
 }
