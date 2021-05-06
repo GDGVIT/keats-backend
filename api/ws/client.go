@@ -127,7 +127,7 @@ func (c *Client) readPump(rdb *redis.Client) {
 				"action":         "like_chatmessage",
 				"chatmessage_id": id,
 			}
-			err = crud.AddLike(id)
+			err = crud.AddChatMessageLike(id)
 			if err != nil {
 				if err == pg.ErrNoRows {
 					_ = c.conn.WriteJSON(fiber.Map{
@@ -138,14 +138,71 @@ func (c *Client) readPump(rdb *redis.Client) {
 				}
 				_ = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
+					"message": "Something went wrong",
+				})
+				continue
+			}
+		case "comment":
+			commentJSON, err := json.Marshal(jsonMessage["data"])
+			var comment schemas.CommentCreate
+			err = json.Unmarshal(commentJSON, &comment)
+			if err != nil || comment.Message == "" || comment.PageNo == 0 {
+				_ = c.conn.WriteJSON(fiber.Map{
+					"action":  "error",
+					"message": "data in incorrect format",
+				})
+				continue
+			}
+			comment.UserID = c.UserID
+			comment.ClubID = c.ClubID
+			createdcomment, err := crud.CreateComment(&comment)
+			if err != nil {
+				_ = c.conn.WriteJSON(fiber.Map{
+					"action":  "error",
 					"message": err.Error(),
+				})
+				continue
+			}
+			publishMessage = &fiber.Map{
+				"user_id": c.UserID,
+				"action":  "comment",
+				"data":    createdcomment,
+			}
+		case "like_comment":
+			id, ok := jsonMessage["data"].(string)
+			_, err = uuid.Parse(id)
+			if !ok || err != nil {
+				_ = c.conn.WriteJSON(fiber.Map{
+					"action":  "error",
+					"message": "data in incorrect format",
+				})
+				continue
+			}
+
+			publishMessage = &fiber.Map{
+				"user_id":    c.UserID,
+				"action":     "like_comment",
+				"comment_id": id,
+			}
+			err = crud.AddCommentLike(id)
+			if err != nil {
+				if err == pg.ErrNoRows {
+					_ = c.conn.WriteJSON(fiber.Map{
+						"action":  "error",
+						"message": "Comment not found",
+					})
+					continue
+				}
+				_ = c.conn.WriteJSON(fiber.Map{
+					"action":  "error",
+					"message": "Something went wrong",
 				})
 				continue
 			}
 		default:
 			_ = c.conn.WriteJSON(fiber.Map{
 				"status":  "error",
-				"message": fmt.Sprint(jsonMessage["action"], "is not an action"),
+				"message": fmt.Sprint(jsonMessage["action"], " is not an action"),
 			})
 		}
 		bytePublishMessage, err := json.Marshal(publishMessage)

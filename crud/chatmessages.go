@@ -44,8 +44,8 @@ func GetChatMessage(cid string) ([]*schemas.ChatMessage, error) {
 	return chatmessages, nil
 }
 
-// AddLike increments likes field of chatmessage
-func AddLike(id string) error {
+// AddChatMessageLike increments likes field of chatmessage
+func AddChatMessageLike(id string) error {
 	db := pgdb.GetDB()
 	chatmessage := models.ChatMessage{}
 	_, err := db.Model(&chatmessage).
