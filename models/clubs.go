@@ -12,7 +12,7 @@ import (
 // Room represents a room in the database
 type Club struct {
 	ClubName string    `pg:",notnull" json:"clubname"`
-	ClubPic  string    `json:"club_pic"`
+	ClubPic  string    `pg:",default:'https://firebasestorage.googleapis.com/v0/b/keats-caa65.appspot.com/o/public%2Fdefault_club_pic.png?alt=media'" json:"club_pic"`
 	FileURL  string    `pg:",notnull" json:"file_url"`
 	PageNo   int       `json:"page_no"`
 	ID       uuid.UUID `pg:",pk,type:uuid,default:uuid_generate_v4()" json:"id"`
