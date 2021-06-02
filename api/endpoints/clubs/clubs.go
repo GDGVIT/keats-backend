@@ -80,7 +80,7 @@ func updateClubFiles(c *fiber.Ctx) (string, string, error) {
 			return "", "", fmt.Errorf("file parse error")
 		}
 		defer utils.CloseFile(fileFile)
-		acceptedTypes := []string{"application/pdf", "application/epub+xml", "application/epub+zip","application/zip"}
+		acceptedTypes := []string{"application/pdf", "application/epub+xml", "application/epub+zip", "application/zip"}
 		fileURL, err = firebaseclient.WriteObject(&fileFile, acceptedTypes)
 		if err != nil {
 			return "", "", err

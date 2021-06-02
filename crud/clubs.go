@@ -70,7 +70,7 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 		ClubName: objIn.ClubName,
 		ClubPic:  objIn.ClubPic,
 		FileURL:  objIn.FileURL,
-		PageNo: objIn.PageNo,
+		PageNo:   objIn.PageNo,
 	}
 
 	_, err = db.Model(club).
