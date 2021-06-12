@@ -9,6 +9,6 @@ type Comment struct {
 	ParentID uuid.UUID `pg:"type:uuid,nopk" json:"parent_id"`
 	UserID   uuid.UUID `pg:"type:uuid,notnull,nopk" json:"user_id"`
 	PageNo   int       `pg:",notnull" json:"page_no"`
-	Message  string    `pg:",notnull"`
+	Message  string    `pg:",notnull" json:"message"`
 	Likes    int       `pg:",notnull,default:0" json:"likes"`
 }
