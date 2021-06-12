@@ -269,12 +269,6 @@ func ServeWs(conn *websocket.Conn, userID string, clubID string) {
 		return
 	}
 	pubsub := rdb.Subscribe(ctx, clubID)
-
-	// Wait for confirmation that subscription is created before publishing anything.
-	_, err = pubsub.Receive(ctx)
-	if err != nil {
-		panic(err)
-	}
 	c := pubsub.Channel()
 	client := &Client{UserID: userID, ClubID: clubID, PubSub: pubsub, conn: conn, send: c}
 	client.conn.SetReadLimit(maxMessageSize)
