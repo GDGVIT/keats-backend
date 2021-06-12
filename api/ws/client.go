@@ -50,6 +50,9 @@ type Client struct {
 
 	// Buffered ClubID of outbound messages.
 	send <-chan *redis.Message
+
+	// Kill switch channel to synchronise closing of both readPump and writePump
+	killChannel chan bool
 }
 
 // readPump pumps messages from the websocket connection to the pubsub channel.
@@ -61,6 +64,7 @@ func (c *Client) readPump(rdb *redis.Client) {
 	defer func() {
 		_ = c.PubSub.Close()
 		_ = c.conn.Close()
+		c.killChannel <- true
 	}()
 	for {
 		var publishMessage *fiber.Map
@@ -69,8 +73,13 @@ func (c *Client) readPump(rdb *redis.Client) {
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNoStatusReceived) {
 				log.Printf("error: %v", err)
+				break
 			}
-			break
+			_ = c.conn.WriteJSON(fiber.Map{
+				"status": "error",
+				"message": "Invalid message format",
+			})
+			continue
 		}
 
 		if jsonMessage["action"] == "" {
@@ -255,6 +264,8 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+		case <-c.killChannel:
+			break
 		}
 	}
 }
