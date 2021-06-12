@@ -21,10 +21,10 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pongWait = 20 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
+	pingPeriod = 10 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
@@ -227,13 +227,13 @@ func (c *Client) writePump() {
 			var jsonMessage map[string]interface{}
 			if !ok {
 				// The pubsub closed the ClubID.
-				return
+				break
 			}
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				return
+				break
 			}
 			byteMessage := []byte(message.Payload)
 			_ = json.Unmarshal(byteMessage, &jsonMessage)
