@@ -5,6 +5,7 @@ import (
 	"github.com/Krishap-s/keats-backend/pgdb"
 	"github.com/Krishap-s/keats-backend/schemas"
 	"github.com/google/uuid"
+	"time"
 )
 
 // CreateChatMessage creates a chatmessage in the database or returns an error
@@ -22,6 +23,7 @@ func CreateChatMessage(objIn *schemas.ChatMessageCreate) (*models.ChatMessage, e
 		Message: objIn.Message,
 		ClubID:  cid,
 		UserID:  uid,
+		TimeCreated: time.Now(),
 	}
 	_, err = db.Model(chatmessage).Returning("*").Insert()
 	if err != nil {
@@ -37,6 +39,7 @@ func GetChatMessage(cid string) ([]*schemas.ChatMessage, error) {
 	var chatmessages []*schemas.ChatMessage
 	err := db.Model((*models.ChatMessage)(nil)).
 		Where("club_id = ?", cid).
+		Order("time_created ASC").
 		Select(&chatmessages)
 	if err != nil {
 		return nil, err

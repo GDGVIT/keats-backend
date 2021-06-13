@@ -1,6 +1,9 @@
 package models
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"time"
+)
 
 // ChatMessage represents a chatmessage in the database
 type ChatMessage struct {
@@ -9,4 +12,5 @@ type ChatMessage struct {
 	UserID  uuid.UUID `pg:"type:uuid,notnull,nopk" json:"user_id"`
 	Message string    `pg:",notnull" json:"message"`
 	Likes   int       `pg:",notnull,default:0" json:"likes"`
+	TimeCreated time.Time `pg:",notnull,default:now()" json:"time_created"`
 }
