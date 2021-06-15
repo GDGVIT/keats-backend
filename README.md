@@ -15,12 +15,11 @@
 
 
 ## Features
-- [ ]  Uploading and distributing PDFs
-- [ ]  Creating rooms
-- [ ]  Creating comments and chat messages
-- [ ]  Generating QR code for joining rooms
-- [ ]  Letting host of room change status of room and kick people out.
-- [ ]  Vote Kick
+- [X]  Uploading and distributing PDFs
+- [X]  Creating rooms
+- [X]  Creating comments and chat messages
+- [X]  Generating QR code for joining rooms
+- [X]  Letting host of room change status of room and kick people out.
 
 <br>
 
@@ -33,17 +32,17 @@
 
 ## Running
 
-
-< directions to install > 
+Install:
+1) 
 ```bash
-< insert code >
+git clone github.com/GDGVIT/keats-backend
+go build
 ```
+2) make .env file from sample.env with necessary credentials 
 
-< directions to execute >
 
-```bash
-< insert code >
-```
+Execute:
+1) Run generated executable
 
 ## Contributors
 
