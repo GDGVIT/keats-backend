@@ -1,4 +1,4 @@
-package db
+package pgdb
 
 import (
 	"context"
@@ -20,6 +20,8 @@ func GetDB() *pg.DB {
 	}
 
 	opt, err := pg.ParseURL(viper.GetString("DATABASE_URL"))
+	opt.User = viper.GetString("POSTGRES_USER")
+	opt.Password = viper.GetString("POSTGRES_PASSWORD")
 	if err != nil {
 		panic(err)
 	}
@@ -32,6 +34,10 @@ func GetDB() *pg.DB {
 func Migrate() error {
 	models := []interface{}{
 		(*models.User)(nil),
+		(*models.Club)(nil),
+		(*models.Comment)(nil),
+		(*models.ChatMessage)(nil),
+		(*models.ClubUser)(nil),
 	}
 
 	ctx := context.Background()

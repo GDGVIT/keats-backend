@@ -3,38 +3,46 @@ package crud
 import (
 	"github.com/google/uuid"
 
-	"github.com/Krishap-s/keats-backend/db"
 	"github.com/Krishap-s/keats-backend/models"
+	"github.com/Krishap-s/keats-backend/pgdb"
 	"github.com/Krishap-s/keats-backend/schemas"
 )
 
 // CreateUser creates a user in the database or returns an error
 func CreateUser(objIn *schemas.UserCreate) (*models.User, error) {
-	db := db.GetDB()
+	db := pgdb.GetDB()
+	if objIn.Username == "" {
+		objIn.Username = "Blake"
+	}
+
 	user := &models.User{
 		Username: objIn.Username,
+		PhoneNo:  objIn.PhoneNo,
 	}
 
 	_, err := db.Model(user).
-		OnConflict("DO NOTHING").
+		Where("phone_no = ?phone_no").
+		OnConflict("(phone_no) DO NOTHING").
 		Returning("*").
-		Insert()
+		SelectOrInsert()
 	return user, err
 }
 
 // UpdateUser updates an existing user in the database or returns an error
 func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
-	db := db.GetDB()
+	db := pgdb.GetDB()
 
-	// convert string in json body to UUID
-	id, err := uuid.Parse(objIn.ID)
+	uid, err := uuid.Parse(objIn.ID)
 	if err != nil {
 		return nil, err
 	}
-
 	user := &models.User{
-		ID:       id,
-		Username: objIn.Username,
+		ID:         uid,
+		PhoneNo:    objIn.PhoneNo,
+		ProfilePic: objIn.ProfilePic,
+		Username:   objIn.Username,
+		Email:      objIn.Email,
+		Bio:        objIn.Bio,
 	}
 
 	_, err = db.Model(user).Returning("*").WherePK().UpdateNotZero()
@@ -42,26 +50,16 @@ func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 	return user, err
 }
 
-// Parse parses UUID to user and returns the user or returns an error
-func Parse(userID string) (*models.User, error) {
-	// convert string in body to UUID
-	id, err := uuid.Parse(userID)
+// GetUser fetches an existing user or returns an error
+func GetUser(id string) (*models.User, error) {
+	db := pgdb.GetDB()
+
+	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
-
-	user := &models.User{ID: id}
-	return user, nil
-
-}
-
-// GetUser fetches an existing user or returns an error
-func GetUser(userID string) (*models.User, error) {
-	db := db.GetDB()
-
-	user, err := Parse(userID)
-	if err != nil {
-		return nil, err
+	user := &models.User{
+		ID: uid,
 	}
 
 	err = db.Model(user).WherePK().Select()
@@ -72,19 +70,25 @@ func GetUser(userID string) (*models.User, error) {
 	return user, nil
 }
 
-// DeleteUser deletes an existing user or returns an error
-func DeleteUser(userID string) (*models.User, error) {
-	db := db.GetDB()
-
-	user, err := Parse(userID)
+// GetUserClub gets clubuser records from the database
+func GetUserClub(id string) ([]*schemas.Club, error) {
+	db := pgdb.GetDB()
+	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.Model(user).WherePK().Delete()
+	var clubs []*schemas.Club
+	err = db.Model((*models.Club)(nil)).
+		ColumnExpr("club.id,club.club_name,club.club_pic,club.file_url,club.page_no,club.private,club.host_id,u.id as host_id,u.username as host_name,u.profile_pic as host_profile_pic").
+		Join("INNER JOIN club_users as cu").
+		JoinOn("cu.club_id = club.id").
+		Join("INNER JOIN users as u").
+		JoinOn("club.host_id = u.id").
+		Where("cu.user_id = ?", uid).
+		Select(&clubs)
 	if err != nil {
 		return nil, err
 	}
-
-	return user, nil
+	return clubs, nil
 }

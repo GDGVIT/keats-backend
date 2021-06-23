@@ -1,14 +1,23 @@
 package main
 
+//goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
 	"log"
 
+	"github.com/gofiber/fiber/v2/middleware/cors"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	jwtware "github.com/gofiber/jwt/v2"
 	"github.com/spf13/viper"
 
-	"github.com/Krishap-s/keats-backend/api/endpoints"
-	"github.com/Krishap-s/keats-backend/db"
+	"github.com/Krishap-s/keats-backend/api/endpoints/clubs"
+	"github.com/Krishap-s/keats-backend/api/endpoints/users"
+	"github.com/Krishap-s/keats-backend/configs"
+	"github.com/Krishap-s/keats-backend/pgdb"
 )
 
 func healthCheck(c *fiber.Ctx) error {
@@ -24,18 +33,29 @@ func main() {
 		log.Panicln(fmt.Errorf("fatal error config file: %s", err))
 	}
 
-	app := fiber.New()
+	app := fiber.New(configs.FiberConfig())
+
+	// Use Middleware
+	app.Use(limiter.New(configs.LimiterConfig()))
+	app.Use(logger.New(configs.LoggerConfig()))
+	app.Use(recover.New(configs.RecoverConfig()))
+	app.Use(cors.New(configs.CORSConfig()))
+
+	// Setting up jwt config
+	jwtconf := configs.JWTConfig()
+
 	app.Get("/", healthCheck)
 
-	// Run db migrations
+	// Run pgdb migrations
 	log.Println("Running database migrations")
-	if err := db.Migrate(); err != nil {
+	if err := pgdb.Migrate(); err != nil {
 		log.Panic(err)
 	}
 
-	endpoints.MountRoutes(app)
+	users.MountRoutes(app, jwtware.New(jwtconf))
+	clubs.MountRoutes(app, jwtware.New(jwtconf))
 
-	if err := app.Listen(":3000"); err != nil {
+	if err := app.Listen(":8000"); err != nil {
 		log.Panic(err)
 	}
 }
