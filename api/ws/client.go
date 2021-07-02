@@ -4,7 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"time"
+
 	"github.com/Krishap-s/keats-backend/crud"
+	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/redisclient"
 	"github.com/Krishap-s/keats-backend/schemas"
 	"github.com/go-pg/pg/v10"
@@ -12,8 +17,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
-	"log"
-	"time"
 )
 
 const (
@@ -75,28 +78,31 @@ func (c *Client) readPump(rdb *redis.Client) {
 				log.Printf("error: %v", err)
 				break
 			}
-			_ = c.conn.WriteJSON(fiber.Map{
-				"status": "error",
+			err = c.conn.WriteJSON(fiber.Map{
+				"status":  "error",
 				"message": "Invalid message format",
 			})
+			log.Println("Websocket error:", err)
 			continue
 		}
 
 		if jsonMessage["action"] == "" {
-			_ = c.conn.WriteJSON(fiber.Map{
+			err = c.conn.WriteJSON(fiber.Map{
 				"status":  "error",
 				"message": "Invalid message format",
 			})
+			log.Println("Websocket error:", err)
 			continue
 		}
 		switch jsonMessage["action"] {
 		case "chatmessage":
 			text, ok := jsonMessage["data"].(string)
 			if !ok {
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "data in incorrect format",
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 
@@ -106,12 +112,14 @@ func (c *Client) readPump(rdb *redis.Client) {
 				Message: text,
 				Likes:   0,
 			}
-			createdchatmessage, err := crud.CreateChatMessage(chatmessage)
+			var createdchatmessage *models.ChatMessage
+			createdchatmessage, err = crud.CreateChatMessage(chatmessage)
 			if err != nil {
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "Something went wrong",
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 			publishMessage = &fiber.Map{
@@ -123,10 +131,11 @@ func (c *Client) readPump(rdb *redis.Client) {
 			id, ok := jsonMessage["data"].(string)
 			_, err = uuid.Parse(id)
 			if !ok || err != nil {
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "data in incorrect format",
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 
@@ -138,37 +147,44 @@ func (c *Client) readPump(rdb *redis.Client) {
 			err = crud.AddChatMessageLike(id)
 			if err != nil {
 				if err == pg.ErrNoRows {
-					_ = c.conn.WriteJSON(fiber.Map{
+					err = c.conn.WriteJSON(fiber.Map{
 						"action":  "error",
 						"message": "Chatmessage not found",
 					})
+					log.Println("Websocket error:", err)
 					continue
 				}
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "Something went wrong",
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 		case "comment":
-			commentJSON, err := json.Marshal(jsonMessage["data"])
+			var commentJSON []byte
+			commentJSON, err = json.Marshal(jsonMessage["data"])
+			log.Println("Websocket error:", err)
 			var comment schemas.CommentCreate
 			err = json.Unmarshal(commentJSON, &comment)
 			if err != nil || comment.Message == "" || comment.PageNo == 0 {
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "data in incorrect format",
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 			comment.UserID = c.UserID
 			comment.ClubID = c.ClubID
-			createdcomment, err := crud.CreateComment(&comment)
+			var createdcomment *models.Comment
+			createdcomment, err = crud.CreateComment(&comment)
 			if err != nil {
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": err.Error(),
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 			publishMessage = &fiber.Map{
@@ -180,10 +196,11 @@ func (c *Client) readPump(rdb *redis.Client) {
 			id, ok := jsonMessage["data"].(string)
 			_, err = uuid.Parse(id)
 			if !ok || err != nil {
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "data in incorrect format",
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 
@@ -195,25 +212,30 @@ func (c *Client) readPump(rdb *redis.Client) {
 			err = crud.AddCommentLike(id)
 			if err != nil {
 				if err == pg.ErrNoRows {
-					_ = c.conn.WriteJSON(fiber.Map{
+					err = c.conn.WriteJSON(fiber.Map{
 						"action":  "error",
 						"message": "Comment not found",
 					})
+					log.Println("Websocket error:", err)
 					continue
 				}
-				_ = c.conn.WriteJSON(fiber.Map{
+				err = c.conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "Something went wrong",
 				})
+				log.Println("Websocket error:", err)
 				continue
 			}
 		default:
-			_ = c.conn.WriteJSON(fiber.Map{
+			err = c.conn.WriteJSON(fiber.Map{
 				"status":  "error",
 				"message": fmt.Sprint(jsonMessage["action"], " is not an action"),
 			})
+			log.Println("Websocket error:", err)
 		}
-		bytePublishMessage, err := json.Marshal(publishMessage)
+		var bytePublishMessage []byte
+		bytePublishMessage, err = json.Marshal(publishMessage)
+		log.Println("Websocket error:", err)
 		// Publish to websocket ClubID
 		ctx := context.Background()
 		rdb.Publish(ctx, c.ClubID, bytePublishMessage)
@@ -238,21 +260,27 @@ func (c *Client) writePump() {
 				// The pubsub closed the ClubID.
 				break
 			}
-			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			err := c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			log.Println("Websocket error:", err)
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			var w io.WriteCloser
+			w, err = c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				break
 			}
 			byteMessage := []byte(message.Payload)
-			_ = json.Unmarshal(byteMessage, &jsonMessage)
-			_, _ = w.Write([]byte(message.Payload))
+			err = json.Unmarshal(byteMessage, &jsonMessage)
+			log.Println("Websocket error:", err)
+			_, err = w.Write([]byte(message.Payload))
+			log.Println("Websocket error:", err)
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				_, _ = w.Write(newline)
-				_, _ = w.Write([]byte((<-c.send).String()))
+				_, err = w.Write(newline)
+				log.Println("Websocket error:", err)
+				_, err = w.Write([]byte((<-c.send).String()))
+				log.Println("Websocket error:", err)
 			}
 
 			if err := w.Close(); err != nil {
@@ -260,8 +288,9 @@ func (c *Client) writePump() {
 			}
 
 		case <-ticker.C:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			err := c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			log.Println("Websocket error:", err)
+			if err = c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		case <-c.killChannel:
@@ -283,8 +312,12 @@ func ServeWs(conn *websocket.Conn, userID string, clubID string) {
 	c := pubsub.Channel()
 	client := &Client{UserID: userID, ClubID: clubID, PubSub: pubsub, conn: conn, send: c}
 	client.conn.SetReadLimit(maxMessageSize)
-	_ = client.conn.SetReadDeadline(time.Now().Add(pongWait))
-	client.conn.SetPongHandler(func(string) error { _ = client.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	err = client.conn.SetReadDeadline(time.Now().Add(pongWait))
+	client.conn.SetPongHandler(func(string) error {
+		err = client.conn.SetReadDeadline(time.Now().Add(pongWait))
+		log.Println("Websockets error:", err)
+		return nil
+	})
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
 	go client.writePump()

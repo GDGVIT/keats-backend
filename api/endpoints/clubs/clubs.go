@@ -2,6 +2,8 @@ package clubs
 
 import (
 	"fmt"
+	"mime/multipart"
+
 	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/firebaseclient"
@@ -55,11 +57,12 @@ func prepUpdate(c *fiber.Ctx, userID string) error {
 func updateClubFiles(c *fiber.Ctx) (string, string, error) {
 	var clubPicURL, fileURL string
 	clubPicFileHeader, err := c.FormFile("club_pic")
+	if err != nil {
+		return "", "", fmt.Errorf("form Data Incorrect")
+	}
 	if clubPicFileHeader != nil {
-		if err != nil {
-			return "", "", fmt.Errorf("form Data Incorrect")
-		}
-		clubPicFile, err := clubPicFileHeader.Open()
+		var clubPicFile multipart.File
+		clubPicFile, err = clubPicFileHeader.Open()
 		if err != nil {
 			return "", "", fmt.Errorf("file parse error")
 		}

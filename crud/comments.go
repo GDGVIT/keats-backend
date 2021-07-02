@@ -19,6 +19,9 @@ func CreateComment(objIn *schemas.CommentCreate) (*models.Comment, error) {
 		return nil, err
 	}
 	pid, err := uuid.Parse(objIn.ParentID)
+	if err != nil {
+		return nil, err
+	}
 	comment := &models.Comment{
 		PageNo:   objIn.PageNo,
 		Message:  objIn.Message,

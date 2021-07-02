@@ -3,8 +3,9 @@ package configs
 //goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
-	"github.com/gofiber/websocket/v2"
 	"log"
+
+	"github.com/gofiber/websocket/v2"
 
 	jwt "github.com/form3tech-oss/jwt-go"
 	"github.com/go-pg/pg/v10"
@@ -26,6 +27,7 @@ func GetSecret() string {
 func JWTConfig() jwtware.Config {
 	return jwtware.Config{
 		Filter: func(c *fiber.Ctx) bool {
+			//nolint
 			if websocket.IsWebSocketUpgrade(c) {
 				return true
 			}

@@ -3,6 +3,8 @@ package models
 import (
 	"context"
 	"encoding/json"
+	"log"
+
 	"github.com/Krishap-s/keats-backend/redisclient"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
@@ -30,10 +32,12 @@ func (c *Club) AfterUpdate(ctx context.Context) error {
 		return err
 	}
 	clubID := c.ID.String()
-	byteData, _ := json.Marshal(fiber.Map{
+	var byteData []byte
+	byteData, err = json.Marshal(fiber.Map{
 		"action": "club_update",
 		"data":   c,
 	})
+	log.Println("Hook error:", err)
 	rdb.Publish(ctx, clubID, byteData)
 	return nil
 }

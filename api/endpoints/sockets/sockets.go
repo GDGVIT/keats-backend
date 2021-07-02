@@ -2,6 +2,8 @@ package sockets
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/Krishap-s/keats-backend/api/ws"
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/crud"
@@ -26,15 +28,18 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 		clubID := conn.Params("id")
 		_, err := crud.GetClub(clubID)
 		if err != nil {
-			_ = conn.WriteJSON(fiber.Map{
+			err = conn.WriteJSON(fiber.Map{
 				"action":  "error",
 				"message": "Club not found",
 			})
+			log.Println("Websocket error:", err)
 			return
 		}
 		usersList, err := crud.GetClubUser(clubID)
+		log.Println("DB error:", err)
 		tokenstring := conn.Query("token")
-		token, err := jwt.Parse(tokenstring, func(token *jwt.Token) (interface{}, error) {
+		var token *jwt.Token
+		token, err = jwt.Parse(tokenstring, func(token *jwt.Token) (interface{}, error) {
 			// Don't forget to validate the alg is what you expect:
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -45,26 +50,29 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 		})
 		if err != nil {
 			if err.Error() == "Missing or malformed JWT" {
-				_ = conn.WriteJSON(fiber.Map{
+				err = conn.WriteJSON(fiber.Map{
 					"action":  "error",
 					"message": "Missing or malformed JWT",
 				})
+				log.Println("Websocket error:", err)
 				return
 			}
-			_ = conn.WriteJSON(fiber.Map{
+			err = conn.WriteJSON(fiber.Map{
 				"action":  "error",
 				"message": "Invalid or Expired JWT",
 			})
+			log.Println("Websocket error:", err)
 			return
 		}
 		claims := token.Claims.(jwt.MapClaims)
 		uid := claims["id"].(string)
 		userID, err := uuid.Parse(uid)
 		if err != nil {
-			_ = conn.WriteJSON(fiber.Map{
+			err = conn.WriteJSON(fiber.Map{
 				"action":  "error",
 				"message": "Invalid or Expired JWT",
 			})
+			log.Println("Websocket error:", err)
 			return
 		}
 		var isMember = false
@@ -75,10 +83,11 @@ func MountWebsockets(app *fiber.App, middleware func(c *fiber.Ctx) error) {
 			}
 		}
 		if !isMember {
-			_ = conn.WriteJSON(fiber.Map{
+			err = conn.WriteJSON(fiber.Map{
 				"action":  "error",
 				"message": "You are not a member of this club",
 			})
+			log.Println("Websocket error:", err)
 			return
 		}
 		ws.ServeWs(conn, uid, clubID)

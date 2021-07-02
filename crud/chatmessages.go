@@ -1,11 +1,12 @@
 package crud
 
 import (
+	"time"
+
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/pgdb"
 	"github.com/Krishap-s/keats-backend/schemas"
 	"github.com/google/uuid"
-	"time"
 )
 
 // CreateChatMessage creates a chatmessage in the database or returns an error
@@ -20,9 +21,9 @@ func CreateChatMessage(objIn *schemas.ChatMessageCreate) (*models.ChatMessage, e
 		return nil, err
 	}
 	chatmessage := &models.ChatMessage{
-		Message: objIn.Message,
-		ClubID:  cid,
-		UserID:  uid,
+		Message:     objIn.Message,
+		ClubID:      cid,
+		UserID:      uid,
 		TimeCreated: time.Now(),
 	}
 	_, err = db.Model(chatmessage).Returning("*").Insert()

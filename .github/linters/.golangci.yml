@@ -14,6 +14,7 @@ issues:
         - dupl
         - gosec
         - goconst
+        - gosimple
 linters:
   enable:
     - golint
@@ -22,7 +23,7 @@ linters:
     - gocyclo
     - goconst
     - goimports
-    - maligned
+    - govet
     - gocritic
 linters-settings:
   errcheck:
@@ -34,7 +35,7 @@ linters-settings:
     check-shadowing: true
   gocyclo:
     # minimal code complexity to report, 30 by default
-    min-complexity: 20
+    min-complexity: 30
   maligned:
     # print struct with more effective memory layout or not, false by default
     suggest-new: true

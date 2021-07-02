@@ -3,6 +3,8 @@ package models
 import (
 	"context"
 	"encoding/json"
+	"log"
+
 	"github.com/Krishap-s/keats-backend/redisclient"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
@@ -25,10 +27,12 @@ func (c *ClubUser) AfterInsert(ctx context.Context) error {
 	}
 	userID := c.UserID.String()
 	clubID := c.ClubID.String()
-	byteData, _ := json.Marshal(fiber.Map{
+	var byteData []byte
+	byteData, err = json.Marshal(fiber.Map{
 		"action": "user_join",
 		"data":   userID,
 	})
+	log.Println("Hook error:", err)
 	rdb.Publish(ctx, clubID, byteData)
 	return nil
 }
@@ -43,10 +47,12 @@ func (c *ClubUser) AfterDelete(ctx context.Context) error {
 	}
 	userID := c.UserID.String()
 	clubID := c.ClubID.String()
-	byteData, _ := json.Marshal(fiber.Map{
+	var byteData []byte
+	byteData, err = json.Marshal(fiber.Map{
 		"action": "user_leave",
 		"data":   userID,
 	})
+	log.Println("Hook error:", err)
 	rdb.Publish(ctx, clubID, byteData)
 	return nil
 }

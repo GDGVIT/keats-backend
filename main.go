@@ -3,7 +3,6 @@ package main
 //goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
-	"github.com/Krishap-s/keats-backend/api/sockets"
 	"log"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -16,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/Krishap-s/keats-backend/api/endpoints/clubs"
+	"github.com/Krishap-s/keats-backend/api/endpoints/sockets"
 	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/pgdb"
