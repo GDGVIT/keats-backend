@@ -1,6 +1,8 @@
 package crud
 
 import (
+	"fmt"
+
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/pgdb"
 	"github.com/Krishap-s/keats-backend/schemas"
@@ -29,6 +31,9 @@ func CreateClub(objIn *schemas.ClubCreate) (*models.Club, error) {
 	uid, err := uuid.Parse(objIn.HostID)
 	if err != nil {
 		return nil, err
+	}
+	if len(objIn.ClubName) > 30 || len(objIn.ClubPic) > 100 {
+		return nil, fmt.Errorf("max string length")
 	}
 	club := &models.Club{
 		ClubName: objIn.ClubName,
@@ -64,6 +69,9 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 	uid, err := uuid.Parse(objIn.ID)
 	if err != nil {
 		return nil, err
+	}
+	if len(objIn.ClubName) > 30 || len(objIn.ClubPic) > 100 {
+		return nil, fmt.Errorf("max string length")
 	}
 	club := &models.Club{
 		ID:       uid,

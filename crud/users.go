@@ -1,6 +1,8 @@
 package crud
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 
 	"github.com/Krishap-s/keats-backend/models"
@@ -13,6 +15,9 @@ func CreateUser(objIn *schemas.UserCreate) (*models.User, error) {
 	db := pgdb.GetDB()
 	if objIn.Username == "" {
 		objIn.Username = "Blake"
+	}
+	if len(objIn.Username) > 30 || len(objIn.Email) > 50 {
+		return nil, fmt.Errorf("max string length")
 	}
 
 	user := &models.User{
@@ -33,6 +38,9 @@ func UpdateUser(objIn *schemas.UserUpdate) (*models.User, error) {
 	db := pgdb.GetDB()
 
 	uid, err := uuid.Parse(objIn.ID)
+	if len(objIn.Username) > 30 || len(objIn.Email) > 50 || len(objIn.Bio) > 100 || len(objIn.ProfilePic) > 100 {
+		return nil, fmt.Errorf("max string length")
+	}
 	if err != nil {
 		return nil, err
 	}
