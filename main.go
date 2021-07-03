@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/Krishap-s/keats-backend/api/endpoints/clubs"
+	"github.com/Krishap-s/keats-backend/api/endpoints/sockets"
 	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/pgdb"
@@ -54,8 +55,9 @@ func main() {
 
 	users.MountRoutes(app, jwtware.New(jwtconf))
 	clubs.MountRoutes(app, jwtware.New(jwtconf))
+	sockets.MountWebsockets(app, jwtware.New(jwtconf))
 
-	if err := app.Listen(":8000"); err != nil {
+	if err := app.Listen("0.0.0.0:" + viper.GetString("PORT")); err != nil {
 		log.Panic(err)
 	}
 }

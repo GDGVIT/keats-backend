@@ -2,6 +2,7 @@ package clubs
 
 import (
 	"fmt"
+	"mime/multipart"
 
 	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/crud"
@@ -54,40 +55,39 @@ func prepUpdate(c *fiber.Ctx, userID string) error {
 }
 
 func updateClubFiles(c *fiber.Ctx) (string, string, error) {
+	var clubPicURL, fileURL string
 	clubPicFileHeader, err := c.FormFile("club_pic")
-	if clubPicFileHeader == nil {
-		return "", "", nil
-	}
 	if err != nil {
 		return "", "", fmt.Errorf("form Data Incorrect")
 	}
-	clubPicFile, err := clubPicFileHeader.Open()
-	if err != nil {
-		return "", "", fmt.Errorf("file parse error")
+	if clubPicFileHeader != nil {
+		var clubPicFile multipart.File
+		clubPicFile, err = clubPicFileHeader.Open()
+		if err != nil {
+			return "", "", fmt.Errorf("file parse error")
+		}
+		defer utils.CloseFile(clubPicFile)
+		acceptedTypes := []string{"image/png", "image/jpeg"}
+		clubPicURL, err = firebaseclient.WriteObject(&clubPicFile, acceptedTypes)
+		if err != nil {
+			return "", "", err
+		}
 	}
-	defer utils.CloseFile(clubPicFile)
-	acceptedTypes := []string{"image/png", "image/jpeg"}
-	clubPicURL, err := firebaseclient.WriteObject(&clubPicFile, acceptedTypes)
-	if err != nil {
-		return "", "", err
-	}
-
 	fileHeader, err := c.FormFile("file")
-	if fileHeader == nil {
-		return "", "", nil
-	}
-	if err != nil {
-		return "", "", fmt.Errorf("form Data Incorrect")
-	}
-	fileFile, err := fileHeader.Open()
-	if err != nil {
-		return "", "", fmt.Errorf("file parse error")
-	}
-	defer utils.CloseFile(fileFile)
-	acceptedTypes = []string{"application/pdf", "application/epub+xml"}
-	fileURL, err := firebaseclient.WriteObject(&fileFile, acceptedTypes)
-	if err != nil {
-		return "", "", err
+	if fileHeader != nil {
+		if err != nil {
+			return "", "", fmt.Errorf("form Data Incorrect")
+		}
+		fileFile, err := fileHeader.Open()
+		if err != nil {
+			return "", "", fmt.Errorf("file parse error")
+		}
+		defer utils.CloseFile(fileFile)
+		acceptedTypes := []string{"application/pdf", "application/epub+xml", "application/epub+zip", "application/zip"}
+		fileURL, err = firebaseclient.WriteObject(&fileFile, acceptedTypes)
+		if err != nil {
+			return "", "", err
+		}
 	}
 	return clubPicURL, fileURL, nil
 }
@@ -143,6 +143,13 @@ func joinClub(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	// Shows host user as the first user
+	for i, clubUser := range usersList {
+		if clubUser.ID.String() == club.HostID {
+			usersList[0], usersList[i] = usersList[i], usersList[0]
+			break
+		}
+	}
 	user := c.Locals("user").(*models.User)
 	uidBytes, err := user.ID.MarshalText()
 	if err != nil {
@@ -156,14 +163,23 @@ func joinClub(c *fiber.Ctx) error {
 		}
 		return err
 	}
+	chatMessages, err := crud.GetChatMessage(clubID)
+	if err != nil {
+		return err
+	}
+
+	comments, err := crud.GetComment(clubID)
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
 			"club":     club,
 			"users":    usersList,
-			"comments": "{}",
-			"chat":     "{}",
+			"comments": comments,
+			"chat":     chatMessages,
 		},
 		"message": "Club joined successfully",
 	})
@@ -200,7 +216,7 @@ func getClub(c *fiber.Ctx) error {
 		}
 	}
 	if !isMember {
-		return fmt.Errorf("not host")
+		return fmt.Errorf("not member")
 	}
 	if err != nil {
 		return err
@@ -209,13 +225,29 @@ func getClub(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	// Shows host user as the first user
+	for i, clubUser := range usersList {
+		if clubUser.ID.String() == club.HostID {
+			usersList[0], usersList[i] = usersList[i], usersList[0]
+			break
+		}
+	}
+	chatMessages, err := crud.GetChatMessage(clubID)
+	if err != nil {
+		return err
+	}
+
+	comments, err := crud.GetComment(clubID)
+	if err != nil {
+		return err
+	}
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
 			"club":     club,
 			"users":    usersList,
-			"comments": "{}",
-			"chat":     "{}",
+			"comments": comments,
+			"chat":     chatMessages,
 		},
 	})
 }

@@ -70,9 +70,17 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 		ClubName: objIn.ClubName,
 		ClubPic:  objIn.ClubPic,
 		FileURL:  objIn.FileURL,
+		PageNo:   objIn.PageNo,
 	}
 
-	_, err = db.Model(club).Returning("*").WherePK().UpdateNotZero()
+	_, err = db.Model(club).
+		Column("club_name").
+		Column("file_url").
+		Column("club_pic").
+		Column("page_no").
+		Returning("*").
+		WherePK().
+		UpdateNotZero()
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +196,7 @@ func DeleteClubUser(clubID string, userID string) (*models.ClubUser, error) {
 	}
 	cid := clubuser.ClubID
 	uid := clubuser.UserID
-	_, err = db.Model(clubuser).Where("user_id = ?user_id and club_id = ?club_id").Delete()
+	_, err = db.Model(clubuser).Where("user_id = ?user_id and club_id = ?club_id").Returning("*").Delete()
 	if err != nil {
 		return nil, err
 	}
@@ -215,6 +223,7 @@ func DeleteClubUser(clubID string, userID string) (*models.ClubUser, error) {
 			club.HostID = users[0].ID
 		} else {
 			club.HostID = uuid.Nil
+			club.Private = true
 		}
 		_, err = db.Model(club).WherePK().Update()
 		if err != nil {

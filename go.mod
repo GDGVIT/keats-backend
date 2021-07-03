@@ -7,14 +7,18 @@ require (
 	cloud.google.com/go/firestore v1.5.0 // indirect
 	cloud.google.com/go/storage v1.14.0 // indirect
 	firebase.google.com/go/v4 v4.4.0
+	github.com/fasthttp/websocket v1.4.3 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible
-	github.com/go-pg/pg/v10 v10.7.5
+	github.com/go-pg/pg/v10 v10.9.1
+	github.com/go-redis/redis/v8 v8.8.2
 	github.com/gofiber/fiber/v2 v2.5.0
 	github.com/gofiber/jwt/v2 v2.1.0
+	github.com/gofiber/websocket/v2 v2.0.3
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.2.0
 	github.com/klauspost/compress v1.11.9 // indirect
 	github.com/spf13/viper v1.7.1
+	go.opentelemetry.io/otel v0.20.0 // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602 // indirect
