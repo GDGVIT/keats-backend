@@ -57,6 +57,19 @@ func NotFoundError(c *fiber.Ctx, err string) error {
 	})
 }
 
+func ConstraintError(c *fiber.Ctx, err string) error {
+	return c.Status(fiber.StatusRequestEntityTooLarge).JSON(fiber.Map{
+		"status":  "error",
+		"message": err,
+	})
+}
+
+func MaxCreated(c *fiber.Ctx, err string) error {
+	return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+		"status":  "error",
+		"message": err,
+	})
+}
 func ErrorHandler(c *fiber.Ctx, err error) error {
 	switch err.Error() {
 	case "form Data Incorrect":
@@ -91,6 +104,10 @@ func ErrorHandler(c *fiber.Ctx, err error) error {
 		return BadRequestError(c, "Missing or malformed JWT")
 	case "invalid jwt":
 		return UnauthorizedError(c, "Invalid or Expired JWT")
+	case "max string length":
+		return ConstraintError(c, "One of your string inputs are too large")
+	case "max clubs created":
+		return MaxCreated(c, "You have exceeded maximum number of clubs created per user")
 	}
 	log.Println("Uncaught Error:", err.Error())
 	return InternalServerError(c, "")

@@ -32,7 +32,10 @@ func (c *ClubUser) AfterInsert(ctx context.Context) error {
 		"action": "user_join",
 		"data":   userID,
 	})
-	log.Println("Hook error:", err)
+	if err != nil {
+		log.Println("Hook error:", err)
+		return nil
+	}
 	rdb.Publish(ctx, clubID, byteData)
 	return nil
 }
@@ -52,7 +55,10 @@ func (c *ClubUser) AfterDelete(ctx context.Context) error {
 		"action": "user_leave",
 		"data":   userID,
 	})
-	log.Println("Hook error:", err)
+	if err != nil {
+		log.Println("Hook error:", err)
+		return nil
+	}
 	rdb.Publish(ctx, clubID, byteData)
 	return nil
 }

@@ -1,10 +1,13 @@
 package crud
 
 import (
+	"fmt"
+
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/pgdb"
 	"github.com/Krishap-s/keats-backend/schemas"
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 )
 
 func parseClubUser(clubID string, userID string) (*models.ClubUser, error) {
@@ -29,6 +32,9 @@ func CreateClub(objIn *schemas.ClubCreate) (*models.Club, error) {
 	uid, err := uuid.Parse(objIn.HostID)
 	if err != nil {
 		return nil, err
+	}
+	if len(objIn.ClubName) > 30 || len(objIn.ClubPic) > 100 {
+		return nil, fmt.Errorf("max string length")
 	}
 	club := &models.Club{
 		ClubName: objIn.ClubName,
@@ -64,6 +70,9 @@ func UpdateClub(objIn *schemas.ClubUpdate) (*models.Club, error) {
 	uid, err := uuid.Parse(objIn.ID)
 	if err != nil {
 		return nil, err
+	}
+	if len(objIn.ClubName) > 30 || len(objIn.ClubPic) > 100 {
+		return nil, fmt.Errorf("max string length")
 	}
 	club := &models.Club{
 		ID:       uid,
@@ -115,8 +124,9 @@ func ToggleSync(clubID string) error {
 }
 
 // ListClub gets all non-private clubs from database or returns an error
-func ListClub(userID string) ([]*schemas.Club, error) {
+func ListClub(userID string, n int) ([]*schemas.Club, error) {
 	db := pgdb.GetDB()
+	pageSize := viper.GetInt("CLUB_PAGE_SIZE")
 	var clubs []*schemas.Club
 	err := db.Model((*models.Club)(nil)).
 		ColumnExpr("club.id,club.club_name,club.club_pic,club.file_url,club.page_no,club.private,club.host_id,u.id as host_id,u.username as host_name,u.profile_pic as host_profile_pic").
@@ -124,6 +134,8 @@ func ListClub(userID string) ([]*schemas.Club, error) {
 		JoinOn("club.host_id = u.id").
 		Where("private = false").
 		Where("NOT EXISTS (SELECT * FROM club_users cu WHERE cu.club_id = club.id AND cu.user_id = ?)", userID).
+		Offset((n - 1) * pageSize).
+		Limit(pageSize).
 		Select(&clubs)
 	if err != nil {
 		return nil, err

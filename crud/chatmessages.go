@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Krishap-s/keats-backend/models"
@@ -19,6 +20,9 @@ func CreateChatMessage(objIn *schemas.ChatMessageCreate) (*models.ChatMessage, e
 	uid, err := uuid.Parse(objIn.UserID)
 	if err != nil {
 		return nil, err
+	}
+	if len(objIn.Message) > 150 {
+		return nil, fmt.Errorf("max string length")
 	}
 	chatmessage := &models.ChatMessage{
 		Message:     objIn.Message,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime/multipart"
+	"strconv"
 
 	"github.com/Krishap-s/keats-backend/configs"
 	"github.com/Krishap-s/keats-backend/crud"
@@ -170,7 +171,12 @@ func getUserClubsAndDetails(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	clubs, err := crud.GetUserClub(uid)
+	var n int
+	n, err = strconv.Atoi(c.Query("page", "0"))
+	if err != nil || n < 1 {
+		n = 1
+	}
+	clubs, err := crud.GetUserClub(uid, n)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			return fmt.Errorf("club not found")

@@ -1,6 +1,8 @@
 package crud
 
 import (
+	"fmt"
+
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/pgdb"
 	"github.com/Krishap-s/keats-backend/schemas"
@@ -21,6 +23,9 @@ func CreateComment(objIn *schemas.CommentCreate) (*models.Comment, error) {
 	pid, err := uuid.Parse(objIn.ParentID)
 	if err != nil {
 		return nil, err
+	}
+	if len(objIn.Message) > 150 {
+		return nil, fmt.Errorf("max string length")
 	}
 	comment := &models.Comment{
 		PageNo:   objIn.PageNo,
