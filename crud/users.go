@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 
 	"github.com/Krishap-s/keats-backend/models"
 	"github.com/Krishap-s/keats-backend/pgdb"
@@ -81,6 +82,7 @@ func GetUser(id string) (*models.User, error) {
 // GetUserClub gets clubuser records from the database
 func GetUserClub(id string, n int) ([]*schemas.Club, error) {
 	db := pgdb.GetDB()
+	pageSize := viper.GetInt("CLUB_PAGE_SIZE")
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
@@ -94,8 +96,8 @@ func GetUserClub(id string, n int) ([]*schemas.Club, error) {
 		Join("INNER JOIN users as u").
 		JoinOn("club.host_id = u.id").
 		Where("cu.user_id = ?", uid).
-		Offset((n - 1) * 10).
-		Limit(10).
+		Offset((n - 1) * pageSize).
+		Limit(pageSize).
 		Select(&clubs)
 	if err != nil {
 		return nil, err

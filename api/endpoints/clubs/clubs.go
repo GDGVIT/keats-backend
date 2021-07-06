@@ -15,6 +15,7 @@ import (
 	"github.com/Krishap-s/keats-backend/utils"
 	"github.com/go-pg/pg/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/spf13/viper"
 )
 
 // Non Handlers
@@ -59,12 +60,10 @@ func prepUpdate(c *fiber.Ctx, userID string) error {
 
 func updateClubFiles(c *fiber.Ctx) (string, string, error) {
 	var clubPicURL, fileURL string
-	clubPicFileHeader, err := c.FormFile("club_pic")
-	if err != nil {
-	}
+	//nolint
+	clubPicFileHeader, _ := c.FormFile("club_pic")
 	if clubPicFileHeader != nil {
-		var clubPicFile multipart.File
-		clubPicFile, err = clubPicFileHeader.Open()
+		clubPicFile, err := clubPicFileHeader.Open()
 		if err != nil {
 			return "", "", fmt.Errorf("file parse error")
 		}
@@ -109,13 +108,16 @@ func prepToggle(c *fiber.Ctx) (*clubRequests, error) {
 // Handlers
 
 func createClub(c *fiber.Ctx) error {
+	maxClubCreated := viper.GetInt64("MAX_NUMBER_OF_CLUBS_CREATED")
+	timePeriod := viper.GetFloat64("TIME_PERIOD_CLUB_CREATED_LIMIT")
+	timePeriodHour := time.Hour * time.Duration(timePeriod)
 	rdb, err := redisclient.GetRedisClient()
 	if err != nil {
 		return err
 	}
 	pipe := rdb.TxPipeline()
 	r := new(schemas.ClubCreate)
-	if err := c.BodyParser(r); err != nil {
+	if err = c.BodyParser(r); err != nil {
 		return fmt.Errorf("form Data Incorrect")
 	}
 	var uid string
@@ -125,12 +127,12 @@ func createClub(c *fiber.Ctx) error {
 	}
 	counterKey := uid + "_create_club"
 	count := pipe.Incr(c.Context(), counterKey)
-	pipe.Expire(c.Context(), counterKey, time.Hour/2)
+	pipe.Expire(c.Context(), counterKey, timePeriodHour)
 	_, err = pipe.Exec(c.Context())
 	if err != nil {
 		return err
 	}
-	if count.Val() >= 2 {
+	if count.Val() >= maxClubCreated {
 		return fmt.Errorf("max clubs created")
 	}
 	r.HostID = uid
