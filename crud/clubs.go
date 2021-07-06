@@ -123,7 +123,7 @@ func ToggleSync(clubID string) error {
 }
 
 // ListClub gets all non-private clubs from database or returns an error
-func ListClub(userID string) ([]*schemas.Club, error) {
+func ListClub(userID string, n int) ([]*schemas.Club, error) {
 	db := pgdb.GetDB()
 	var clubs []*schemas.Club
 	err := db.Model((*models.Club)(nil)).
@@ -132,6 +132,8 @@ func ListClub(userID string) ([]*schemas.Club, error) {
 		JoinOn("club.host_id = u.id").
 		Where("private = false").
 		Where("NOT EXISTS (SELECT * FROM club_users cu WHERE cu.club_id = club.id AND cu.user_id = ?)", userID).
+		Offset((n - 1) * 10).
+		Limit(10).
 		Select(&clubs)
 	if err != nil {
 		return nil, err

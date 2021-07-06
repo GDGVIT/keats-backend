@@ -3,6 +3,7 @@ package clubs
 import (
 	"fmt"
 	"mime/multipart"
+	"strconv"
 
 	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/crud"
@@ -186,11 +187,16 @@ func joinClub(c *fiber.Ctx) error {
 }
 
 func listClubs(c *fiber.Ctx) error {
+	var n int
 	uid, err := users.GetUID(c)
 	if err != nil {
 		return err
 	}
-	clubs, err := crud.ListClub(uid)
+	n, err = strconv.Atoi(c.Query("page", "0"))
+	if err != nil || n < 1 {
+		n = 1
+	}
+	clubs, err := crud.ListClub(uid, n)
 	if err != nil {
 		return err
 	}

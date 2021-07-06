@@ -79,7 +79,7 @@ func GetUser(id string) (*models.User, error) {
 }
 
 // GetUserClub gets clubuser records from the database
-func GetUserClub(id string) ([]*schemas.Club, error) {
+func GetUserClub(id string, n int) ([]*schemas.Club, error) {
 	db := pgdb.GetDB()
 	uid, err := uuid.Parse(id)
 	if err != nil {
@@ -94,6 +94,8 @@ func GetUserClub(id string) ([]*schemas.Club, error) {
 		Join("INNER JOIN users as u").
 		JoinOn("club.host_id = u.id").
 		Where("cu.user_id = ?", uid).
+		Offset((n - 1) * 10).
+		Limit(10).
 		Select(&clubs)
 	if err != nil {
 		return nil, err
