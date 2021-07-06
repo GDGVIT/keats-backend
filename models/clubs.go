@@ -37,7 +37,10 @@ func (c *Club) AfterUpdate(ctx context.Context) error {
 		"action": "club_update",
 		"data":   c,
 	})
-	log.Println("Hook error:", err)
+	if err != nil {
+		log.Println("Hook error:", err)
+		return nil
+	}
 	rdb.Publish(ctx, clubID, byteData)
 	return nil
 }

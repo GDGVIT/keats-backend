@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"mime/multipart"
 	"strconv"
+	"time"
 
 	"github.com/Krishap-s/keats-backend/api/endpoints/users"
 	"github.com/Krishap-s/keats-backend/crud"
 	"github.com/Krishap-s/keats-backend/firebaseclient"
 	"github.com/Krishap-s/keats-backend/models"
+	"github.com/Krishap-s/keats-backend/redisclient"
 	"github.com/Krishap-s/keats-backend/schemas"
 	"github.com/Krishap-s/keats-backend/utils"
 	"github.com/go-pg/pg/v10"
@@ -59,7 +61,6 @@ func updateClubFiles(c *fiber.Ctx) (string, string, error) {
 	var clubPicURL, fileURL string
 	clubPicFileHeader, err := c.FormFile("club_pic")
 	if err != nil {
-		return "", "", fmt.Errorf("form Data Incorrect")
 	}
 	if clubPicFileHeader != nil {
 		var clubPicFile multipart.File
@@ -75,11 +76,12 @@ func updateClubFiles(c *fiber.Ctx) (string, string, error) {
 		}
 	}
 	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return "", "", fmt.Errorf("form Data Incorrect")
+	}
 	if fileHeader != nil {
-		if err != nil {
-			return "", "", fmt.Errorf("form Data Incorrect")
-		}
-		fileFile, err := fileHeader.Open()
+		var fileFile multipart.File
+		fileFile, err = fileHeader.Open()
 		if err != nil {
 			return "", "", fmt.Errorf("file parse error")
 		}
@@ -107,21 +109,39 @@ func prepToggle(c *fiber.Ctx) (*clubRequests, error) {
 // Handlers
 
 func createClub(c *fiber.Ctx) error {
+	rdb, err := redisclient.GetRedisClient()
+	if err != nil {
+		return err
+	}
+	pipe := rdb.TxPipeline()
 	r := new(schemas.ClubCreate)
 	if err := c.BodyParser(r); err != nil {
 		return fmt.Errorf("form Data Incorrect")
 	}
-	uid, err := users.GetUID(c)
+	var uid string
+	uid, err = users.GetUID(c)
 	if err != nil {
 		return err
+	}
+	counterKey := uid + "_create_club"
+	count := pipe.Incr(c.Context(), counterKey)
+	pipe.Expire(c.Context(), counterKey, time.Hour/2)
+	_, err = pipe.Exec(c.Context())
+	if err != nil {
+		return err
+	}
+	if count.Val() >= 2 {
+		return fmt.Errorf("max clubs created")
 	}
 	r.HostID = uid
 	r.ClubPic, r.FileURL, err = updateClubFiles(c)
 	if err != nil {
+		rdb.Decr(c.Context(), counterKey)
 		return err
 	}
 	created, err := crud.CreateClub(r)
 	if err != nil {
+		rdb.Decr(c.Context(), counterKey)
 		return err
 	}
 	return c.JSON(fiber.Map{
